@@ -10,14 +10,9 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.27.0",
     "@monaco-editor/react": "^4.6.0",
     "@prisma/client": "^5.16.0",
-    "@react-pdf/renderer": "^4.3.2",
-    "clsx": "^2.1.1",
     "d3": "^7.9.0",
-    "date-fns": "^3.6.0",
-    "html2pdf.js": "^0.14.0",
     "katex": "^0.16.11",
     "lucide-react": "^0.577.0",
     "next": "14.2.5",
