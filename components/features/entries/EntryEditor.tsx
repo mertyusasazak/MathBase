@@ -1,13 +1,16 @@
-// app/components/EntryEditor.tsx
-// Resizable Panel + Live Preview + Source + Relations + Duplicate Detection
-
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import dynamic from 'next/dynamic'
+import { Entry, SourceOption, EntryOption, Relation } from '@/types'
+import { Trash2, Sparkles, X, Save, AlertTriangle, ChevronDown, ChevronUp, Link2, Tag, FileText } from 'lucide-react'
+import { theme } from '@/lib/core/theme'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
+import Select from '@/components/ui/Select'
+import Badge from '@/components/ui/Badge'
 import { renderTitle } from '@/lib/core/math'
-import { Entry, SourceOption, EntryOption } from '@/types'
-import { Trash2, Sparkles, X, Save, AlertTriangle } from 'lucide-react'
+import { MathRenderer } from '@/lib/core/MathRenderer'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 
@@ -22,6 +25,7 @@ interface Props {
   initial?: Partial<Entry>
   allEntries?: EntryOption[]
   sources?: SourceOption[]
+  initialRelations?: Relation[]
   onSave: (entry: Partial<Entry>, versionNote?: string) => Promise<void>
   onCancel: () => void
   onDelete?: () => void
@@ -30,12 +34,79 @@ interface Props {
 const ENTRY_TYPES = ['definition', 'theorem', 'lemma', 'corollary', 'example', 'remark']
 const RELATION_TYPES = ['uses', 'example_of', 'generalizes', 'proof_depends_on', 'related_to', 'contrasts_with']
 
-export default function EntryEditor({ initial, allEntries = [], sources = [], onSave, onCancel, onDelete }: Props) {
+const TYPE_COLORS: Record<string, string> = {
+  definition: '#6b8fcc',
+  theorem: '#c96b6b',
+  lemma: '#8fcc8f',
+  corollary: '#cc6ba8',
+  example: '#cc9f6b',
+  remark: '#a06bcc'
+}
+
+// Collapsible Section (Defined outside to prevent re-mounting and focus loss on typing)
+const CollapsibleSection = ({
+  id,
+  label,
+  icon: Icon,
+  summary,
+  isOpen,
+  onToggle,
+  children
+}: {
+  id: string,
+  label: string,
+  icon: any,
+  summary: string,
+  isOpen: boolean,
+  onToggle: (id: string) => void,
+  children: React.ReactNode
+}) => (
+  <div style={{ borderTop: `1px solid ${theme.colors.border}`, background: theme.colors.surface }}>
+    <div
+      onClick={() => onToggle(id)}
+      style={{
+        padding: '12px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        cursor: 'pointer',
+        transition: theme.animations.fast
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = '#ffffff05'}
+      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Icon size={16} color={isOpen ? theme.colors.accent : theme.colors.textMuted} />
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: isOpen ? theme.colors.text : theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          {label}
+        </span>
+        {!isOpen && (
+          <span style={{ fontSize: '0.7rem', color: theme.colors.accent, opacity: 0.7, marginLeft: 8, fontWeight: 500 }}>
+            {summary}
+          </span>
+        )}
+      </div>
+      {isOpen ? <ChevronUp size={16} color={theme.colors.textMuted} /> : <ChevronDown size={16} color={theme.colors.textMuted} />}
+    </div>
+
+    {isOpen && (
+      <div style={{ padding: '0 20px 16px 20px', animation: 'fadeIn 0.2s ease-out' }}>
+        {children}
+      </div>
+    )}
+  </div>
+)
+
+export default function EntryEditor({ initial, allEntries = [], sources = [], initialRelations = [], onSave, onCancel, onDelete }: Props) {
   const [type, setType] = useState(initial?.type || 'definition')
   const [title, setTitle] = useState(initial?.title || '')
   const [content, setContent] = useState(initial?.content || '')
   const [tags, setTags] = useState(initial?.tags?.join(', ') || '')
-  const [refs, setRefs] = useState<number[]>(initial?.refs || [])
+  const [refs, setRefs] = useState<number[]>(() => {
+    const fromInitial = initial?.refs || []
+    const fromRelations = initialRelations?.map(r => r.toEntryId) || []
+    return Array.from(new Set([...fromInitial, ...fromRelations]))
+  })
   const [aiLoading, setAiLoading] = useState<'tags' | 'refs' | null>(null)
   const [aiTagSuggestions, setAiTagSuggestions] = useState<string[]>([])
   const [aiRefSuggestions, setAiRefSuggestions] = useState<number[]>([])
@@ -47,7 +118,15 @@ export default function EntryEditor({ initial, allEntries = [], sources = [], on
   const [pageRange, setPageRange] = useState(initial?.pageRange || '')
 
   // Relation types per reference
-  const [refRelations, setRefRelations] = useState<Record<number, string>>({})
+  const [refRelations, setRefRelations] = useState<Record<number, string>>(() => {
+    const initialMap: Record<number, string> = {}
+    if (initialRelations && initialRelations.length > 0) {
+      initialRelations.forEach(r => {
+        initialMap[r.toEntryId] = r.relationType
+      })
+    }
+    return initialMap
+  })
 
   // Duplicate detection
   const [duplicates, setDuplicates] = useState<DuplicateEntry[]>([])
@@ -57,30 +136,27 @@ export default function EntryEditor({ initial, allEntries = [], sources = [], on
   // Panel sizing
   const [leftWidth, setLeftWidth] = useState(50)
 
+  // Relations UI state
+  const [refSearch, setRefSearch] = useState('')
+  const [activeRelType, setActiveRelType] = useState('uses')
+  const [isRefSearchOpen, setIsRefSearchOpen] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>('bottom')
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+
+  // Collapsible sections state
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    sources: false,
+    tags: false,
+    relations: true
+  })
+
+  const toggleSection = (id: string) => {
+    setOpenSections(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
   const previewRef = useRef<HTMLDivElement>(null)
   const editorContainerRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<any>(null)
-  const [editorHeight, setEditorHeight] = useState(400)
-
-  useEffect(() => {
-    if (!previewRef.current) return
-    import('katex').then(katex => {
-      if (!previewRef.current) return
-      let html = content
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      html = html.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
-        try { return katex.default.renderToString(math.trim(), { displayMode: true, throwOnError: false }) }
-        catch { return `$$${math}$$` }
-      })
-      html = html.replace(/\$((?:[^$]|\\.)*?)\$/g, (_, math) => {
-        try { return katex.default.renderToString(math.trim(), { displayMode: false, throwOnError: false }) }
-        catch { return `$${math}$` }
-      })
-      html = html.split('\n\n').map(p => `<p style="margin-bottom:1em">${p}</p>`).join('')
-      previewRef.current!.innerHTML = html
-    })
-  }, [content])
 
   // Duplicate detection on title/content change
   useEffect(() => {
@@ -146,10 +222,25 @@ export default function EntryEditor({ initial, allEntries = [], sources = [], on
     setRefs(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])
   }
 
+  // Handle smart dropdown positioning relative to the scrollable pane
+  useEffect(() => {
+    if (isRefSearchOpen && searchContainerRef.current) {
+      const rect = searchContainerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+
+      // If less than 280px below, and more space above, flip it
+      if (spaceBelow < 280 && spaceAbove > spaceBelow) {
+        setDropdownPosition('top')
+      } else {
+        setDropdownPosition('bottom')
+      }
+    }
+  }, [isRefSearchOpen])
+
   const handleSave = async () => {
     setSaving(true)
     try {
-      // Save the entry
       await onSave(
         {
           id: initial?.id,
@@ -164,16 +255,22 @@ export default function EntryEditor({ initial, allEntries = [], sources = [], on
         versionNote || undefined
       )
 
-      // Save relations for refs
-      if (initial?.id || true) {
+      if (initial?.id) {
         for (const refId of refs) {
           const relType = refRelations[refId] || 'related_to'
+
+          // Only save if it's new OR the type has changed
+          const existingRel = initialRelations?.find(r => r.toEntryId === refId)
+          if (existingRel && existingRel.relationType === relType) {
+            continue
+          }
+
           try {
             await fetch('/api/relations', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                fromEntryId: initial?.id || 0, // Will be set by API on new entries
+                fromEntryId: initial.id,
                 toEntryId: refId,
                 relationType: relType,
               })
@@ -194,7 +291,7 @@ export default function EntryEditor({ initial, allEntries = [], sources = [], on
     const onMouseMove = (mouseMoveEvent: MouseEvent) => {
       const deltaX = mouseMoveEvent.clientX - startX
       const newWidth = startWidth + (deltaX / window.innerWidth) * 100
-      setLeftWidth(Math.max(40, Math.min(60, newWidth)))
+      setLeftWidth(Math.max(5, Math.min(95, newWidth)))
     }
 
     const onMouseUp = () => {
@@ -211,8 +308,10 @@ export default function EntryEditor({ initial, allEntries = [], sources = [], on
   return (
     <div style={{
       display: 'flex',
+      width: '100%',
       height: '100%',
-      fontFamily: 'var(--font-sans)'
+      fontFamily: theme.typography.sans,
+      background: theme.colors.background
     }}>
 
       {/* ── LEFT: Edit Panel ── */}
@@ -220,185 +319,424 @@ export default function EntryEditor({ initial, allEntries = [], sources = [], on
         width: `${leftWidth}%`,
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        borderRight: `1px solid ${theme.colors.border}`,
+        position: 'relative',
+        zIndex: 10
       }}>
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #2a2a33', display: 'flex', gap: 12, alignItems: 'center' }}>
-          <select value={type} onChange={e => setType(e.target.value)} style={inputStyle}>
-            {ENTRY_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-          </select>
-          <input
-            value={title} onChange={e => setTitle(e.target.value)} placeholder="Entry title…"
-            style={{ ...inputStyle, flex: 1, fontSize: '1rem', fontFamily: 'EB Garamond, serif' }}
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          display: 'flex',
+          gap: 12,
+          alignItems: 'center',
+          background: theme.colors.surface
+        }}>
+          <div style={{ width: 140 }}>
+            <Select
+              value={type}
+              onChange={e => setType(e.target.value)}
+              options={ENTRY_TYPES.map(t => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+            />
+          </div>
+          <Input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Entry title…"
+            style={{ flex: 1, fontSize: '1.2rem', fontFamily: theme.typography.serif }}
           />
         </div>
 
-        {/* Duplicate Warning */}
-        {showDuplicateWarning && duplicates.length > 0 && (
-          <div style={{
-            margin: '0 20px', padding: '10px 14px', background: 'rgba(201, 168, 76, 0.1)',
-            border: '1px solid rgba(201, 168, 76, 0.3)', borderRadius: 6, marginTop: 8, marginBottom: 8
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <AlertTriangle size={14} color="#c9a84c" />
-              <span style={{ fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.75rem', fontWeight: 600, color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Possible Duplicates Detected
-              </span>
-              <button onClick={() => setShowDuplicateWarning(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#7a7870', cursor: 'pointer', padding: 0 }}>
-                <X size={14} />
-              </button>
-            </div>
-            {duplicates.map(d => (
-              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-                <span style={{ fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: 3, textTransform: 'uppercase', background: TYPE_COLORS[d.type] + '22', color: TYPE_COLORS[d.type] }}>
-                  {d.type.slice(0, 3)}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
+          {/* Duplicate Warning */}
+          {showDuplicateWarning && duplicates.length > 0 && (
+            <div style={{
+              margin: '8px 20px',
+              padding: '10px 12px',
+              background: theme.colors.dangerMuted,
+              border: `1px solid ${theme.colors.danger}44`,
+              borderRadius: 8,
+              minHeight: 'fit-content'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <AlertTriangle size={14} color={theme.colors.danger} />
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: theme.colors.danger, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Possible Duplicates
                 </span>
-                <span style={{ fontFamily: 'EB Garamond, serif', fontSize: '0.9rem', color: '#e8e6df', flex: 1 }}
-                  dangerouslySetInnerHTML={{ __html: renderTitle(d.title) }} />
-                <span style={{ fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.7rem', color: '#c9a84c' }}>
-                  {Math.round(d.score * 100)}% similar
-                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDuplicateWarning(false)}
+                  icon={<X size={14} />}
+                  style={{ marginLeft: 'auto', padding: 2, height: 20, width: 20 }}
+                />
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Monaco Editor */}
-        <div ref={editorContainerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-          <MonacoEditor
-            height={editorHeight}
-            defaultLanguage="markdown"
-            value={content}
-            onChange={v => setContent(v || '')}
-            theme="vs-dark"
-            onMount={(editor) => {
-              editorRef.current = editor
-              const updateHeight = () => {
-                if (editorContainerRef.current) setEditorHeight(editorContainerRef.current.clientHeight)
-              }
-              updateHeight()
-              window.addEventListener('resize', updateHeight)
-            }}
-            options={{
-              fontSize: 14, fontFamily: 'Courier New, monospace', lineNumbers: 'off',
-              minimap: { enabled: false }, wordWrap: 'on', scrollBeyondLastLine: false,
-              padding: { top: 16, bottom: 16 }, quickSuggestions: false,
-              fontLigatures: false, disableLayerHinting: true, automaticLayout: true
-            }}
-          />
-        </div>
-
-        {/* Source Selection */}
-        <div style={{ padding: '10px 20px', borderTop: '1px solid #2a2a33' }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: '0.72rem', color: '#7a7870', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>Source</span>
-            <select
-              value={sourceId || ''}
-              onChange={e => setSourceId(e.target.value ? parseInt(e.target.value) : null)}
-              style={{ ...inputStyle, flex: 1, fontSize: '0.82rem' }}
-            >
-              <option value="">No source</option>
-              {sources.map(s => (
-                <option key={s.id} value={s.id}>{s.title} ({s.sourceType})</option>
+              {duplicates.map(d => (
+                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 0' }}>
+                  <Badge variant="solid" color={TYPE_COLORS[d.type]} style={{ fontSize: '0.6rem', padding: '1px 4px' }}>
+                    {d.type.slice(0, 3)}
+                  </Badge>
+                  <span style={{ fontFamily: theme.typography.serif, fontSize: '0.9rem', color: theme.colors.text, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    dangerouslySetInnerHTML={{ __html: renderTitle(d.title) }} />
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: theme.colors.accent }}>
+                    {Math.round(d.score * 100)}%
+                  </span>
+                </div>
               ))}
-            </select>
-            <input
-              value={pageRange}
-              onChange={e => setPageRange(e.target.value)}
-              placeholder="Pages (e.g. 12-15)"
-              style={{ ...inputStyle, width: 120, fontSize: '0.82rem' }}
-            />
-          </div>
-        </div>
-
-        {/* Tags */}
-        <div style={{ padding: '10px 20px', borderTop: '1px solid #2a2a33' }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-            <input
-              value={tags} onChange={e => setTags(e.target.value)} placeholder="Tags: analysis, topology, …"
-              style={{ ...inputStyle, flex: 1, fontSize: '0.82rem' }}
-            />
-            <button onClick={handleAISuggestTags} disabled={aiLoading === 'tags'} className="btn-base btn-green" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
-              {aiLoading === 'tags' ? '…' : <><Sparkles size={14} /> AI Tags</>}
-            </button>
-          </div>
-          {aiTagSuggestions.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.72rem', color: '#7a7870', alignSelf: 'center' }}>Suggested:</span>
-              {aiTagSuggestions.map(t => <button key={t} onClick={() => acceptTag(t)} style={chipStyle}>+{t}</button>)}
             </div>
           )}
-        </div>
 
-        {/* Refs with Relation Types */}
-        <div style={{ padding: '10px 20px', borderTop: '1px solid #2a2a33' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontSize: '0.72rem', color: '#7a7870', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cross-References & Relations</span>
-            <button onClick={handleAISuggestRefs} disabled={aiLoading === 'refs'} className="btn-base btn-green" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
-              {aiLoading === 'refs' ? '…' : <><Sparkles size={14} /> AI Refs</>}
-            </button>
+          {/* Monaco Editor Container - Stretches to fill gap */}
+          <div ref={editorContainerRef} style={{ 
+            flex: 1,
+            width: '100%',
+            overflow: 'hidden', 
+            position: 'relative',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <MonacoEditor
+              height="100%"
+              defaultLanguage="markdown"
+              value={content}
+              onChange={v => setContent(v || '')}
+              theme="vs-dark"
+              onMount={(editor) => {
+                editorRef.current = editor
+              }}
+              options={{
+                fontSize: 14,
+                fontFamily: theme.typography.mono,
+                lineNumbers: 'on',
+                minimap: { enabled: false },
+                wordWrap: 'on',
+                wrappingIndent: 'indent',
+                wrappingStrategy: 'advanced',
+                scrollBeyondLastLine: false,
+                padding: { top: 16, bottom: 16 },
+                quickSuggestions: false,
+                fontLigatures: true,
+                disableLayerHinting: true,
+                automaticLayout: true,
+                renderLineHighlight: 'all',
+                cursorBlinking: 'smooth',
+                cursorSmoothCaretAnimation: 'on',
+                smoothScrolling: true,
+                scrollbar: {
+                  vertical: 'hidden',
+                  horizontal: 'hidden'
+                }
+              }}
+            />
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, maxHeight: 120, overflowY: 'auto' }}>
-            {allEntries.filter(e => e.id !== initial?.id).map(e => {
-              const isSelected = refs.includes(e.id)
-              return (
-                <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <button
-                    onClick={() => toggleRef(e.id)}
-                    style={{
-                      ...chipStyle,
-                      background: isSelected ? 'rgba(201,168,76,0.2)' : aiRefSuggestions.includes(e.id) ? 'rgba(126,184,176,0.15)' : 'transparent',
-                      borderColor: isSelected ? '#c9a84c' : aiRefSuggestions.includes(e.id) ? '#7eb8b0' : '#2a2a33',
-                      color: isSelected ? '#c9a84c' : '#7a7870',
-                    }}
-                  >
-                    <span dangerouslySetInnerHTML={{ __html: renderTitle(e.title.length > 22 ? e.title.slice(0, 20) + '…' : e.title) }} />
-                    {aiRefSuggestions.includes(e.id) && <span style={{ color: '#7eb8b0', marginLeft: 4 }}>✦</span>}
-                  </button>
-                  {isSelected && (
-                    <select
-                      value={refRelations[e.id] || 'related_to'}
-                      onChange={ev => setRefRelations(prev => ({ ...prev, [e.id]: ev.target.value }))}
-                      style={{ ...inputStyle, fontSize: '0.65rem', padding: '2px 4px', width: 90, background: '#1e1e24' }}
-                    >
-                      {RELATION_TYPES.map(rt => (
-                        <option key={rt} value={rt}>{rt.replace(/_/g, ' ')}</option>
-                      ))}
-                    </select>
+
+          {/* Property Pane */}
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            background: theme.colors.surface,
+            overflow: 'visible',
+            borderTop: `1px solid ${theme.colors.border}`
+          }}>
+            {/* Source Selection */}
+            <CollapsibleSection
+              id="sources"
+              label="Source"
+              icon={FileText}
+              isOpen={openSections.sources}
+              onToggle={toggleSection}
+              summary={sourceId ? (sources.find(s => s.id === sourceId)?.title || 'Selected') + (pageRange ? ` (p.${pageRange})` : '') : 'None'}
+            >
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                  <Select
+                    value={sourceId || ''}
+                    onChange={e => setSourceId(e.target.value ? parseInt(e.target.value) : null)}
+                    options={[
+                      { value: '', label: 'No source' },
+                      ...sources.map(s => ({ value: s.id, label: `${s.title} (${s.sourceType})` }))
+                    ]}
+                  />
+                </div>
+                <div style={{ width: 140 }}>
+                  <Input
+                    value={pageRange}
+                    onChange={e => setPageRange(e.target.value)}
+                    placeholder="Pages (12-15)"
+                  />
+                </div>
+              </div>
+            </CollapsibleSection>
+
+            {/* Tags */}
+            <CollapsibleSection
+              id="tags"
+              label="Tags"
+              icon={Tag}
+              isOpen={openSections.tags}
+              onToggle={toggleSection}
+              summary={tags ? tags.split(',').length + ' tags' : 'None'}
+            >
+              <Input
+                value={tags}
+                onChange={e => setTags(e.target.value)}
+                placeholder="Tags: topology, calculus, …"
+                fullWidth
+                rightAction={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={handleAISuggestTags}
+                    disabled={aiLoading === 'tags'}
+                    icon={<Sparkles size={14} color={theme.colors.accent} />}
+                    style={{ padding: 4, height: 28, width: 28, minWidth: 'auto' }}
+                  />
+                }
+              />
+              {aiTagSuggestions.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.7rem', color: theme.colors.textMuted }}>Suggested:</span>
+                  {aiTagSuggestions.map(t => (
+                    <Badge key={t} onClick={() => acceptTag(t)} style={{ cursor: 'pointer' }}>
+                      +{t}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              id="relations"
+              label="Relations"
+              icon={Link2}
+              isOpen={openSections.relations}
+              onToggle={toggleSection}
+              summary={refs.length + ' links'}
+            >
+              {/* Search Bar Row with AI Suggest Inside */}
+              <div style={{
+                display: 'flex',
+                gap: 10,
+                position: 'relative',
+                marginBottom: 12,
+                alignItems: 'center',
+                zIndex: 200 // Higher than backdrop (150)
+              }}>
+                <div ref={searchContainerRef} style={{ flex: 1, position: 'relative' }}>
+                  <div style={{ position: 'relative', zIndex: 100, flex: 1 }}>
+                    <Input
+                      value={refSearch}
+                      onChange={e => {
+                        setRefSearch(e.target.value)
+                        setIsRefSearchOpen(true)
+                      }}
+                      onFocus={() => setIsRefSearchOpen(true)}
+                      placeholder="Search entries to link..."
+                      fullWidth
+                      rightAction={
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={handleAISuggestRefs}
+                          disabled={aiLoading === 'refs'}
+                          icon={<Sparkles size={14} color={theme.colors.accent} />}
+                          style={{ padding: 4, height: 28, width: 28, minWidth: 'auto' }}
+                        />
+                      }
+                    />
+                  </div>
+
+                  {/* Search Results Dropdown */}
+                  {isRefSearchOpen && (
+                    <>
+                      <div
+                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 150 }}
+                        onClick={() => setIsRefSearchOpen(false)}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        left: 0, right: 0,
+                        zIndex: 1000,
+                        maxHeight: 250,
+                        overflowY: 'auto',
+                        background: theme.colors.surface,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: 8,
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
+                        ...(dropdownPosition === 'top'
+                          ? { bottom: '100%', marginBottom: 8 }
+                          : { top: '100%', marginTop: 4 })
+                      }}>
+                        {allEntries
+                          .filter(e => e.id !== initial?.id && !refs.includes(e.id))
+                          .filter(e => e.title.toLowerCase().includes(refSearch.toLowerCase()))
+                          .map(e => (
+                            <div
+                              key={e.id}
+                              onClick={() => {
+                                toggleRef(e.id)
+                                setRefRelations(prev => ({ ...prev, [e.id]: activeRelType }))
+                                setRefSearch('')
+                                setIsRefSearchOpen(false)
+                              }}
+                              style={{
+                                padding: '10px 14px', cursor: 'pointer', borderBottom: `1px solid ${theme.colors.border}`,
+                                transition: theme.animations.fast, display: 'flex', alignItems: 'center', gap: 10
+                              }}
+                              onMouseEnter={ev => ev.currentTarget.style.background = theme.colors.surfaceHover}
+                              onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}
+                            >
+                              <Badge variant="outline" color={TYPE_COLORS[e.type]}>{e.type.slice(0, 3)}</Badge>
+                              <span style={{ fontSize: '0.9rem', color: theme.colors.text }} dangerouslySetInnerHTML={{ __html: renderTitle(e.title) }} />
+                            </div>
+                          ))}
+                        {allEntries.filter(e => e.id !== initial?.id && !refs.includes(e.id) && e.title.toLowerCase().includes(refSearch.toLowerCase())).length === 0 && (
+                          <div style={{ padding: '16px', textAlign: 'center', fontSize: '0.85rem', color: theme.colors.textMuted }}>No matches found</div>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
-              )
-            })}
+
+                <div style={{ width: 140 }}>
+                  <Select
+                    value={activeRelType}
+                    onChange={e => setActiveRelType(e.target.value)}
+                    options={RELATION_TYPES.map(rt => ({ value: rt, label: rt.replace(/_/g, ' ') }))}
+                  />
+                </div>
+              </div>
+
+              {/* Active Relations: Connected Tree List */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                maxHeight: 220,
+                overflowY: 'auto',
+                padding: '4px 0 4px 16px',
+                position: 'relative',
+                borderLeft: `1px solid ${theme.colors.border}`
+              }}>
+                {refs.map((refId, idx) => {
+                  const entry = allEntries.find(e => e.id === refId)
+                  if (!entry) return null
+                  const isSuggested = aiRefSuggestions.includes(refId)
+
+                  return (
+                    <div key={refId} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '10px 12px',
+                      position: 'relative',
+                      borderBottom: idx === refs.length - 1 ? 'none' : `1px solid ${theme.colors.border}44`,
+                      transition: theme.animations.fast,
+                      borderRadius: '0 8px 8px 0',
+                      marginLeft: -1 // overlap with tree line
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#ffffff05'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      {/* Horizontal Connector Line */}
+                      <div style={{
+                        position: 'absolute',
+                        left: -16,
+                        width: 16,
+                        height: 1,
+                        background: theme.colors.border,
+                        top: '50%'
+                      }} />
+
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 24, height: 24, borderRadius: '50%', background: theme.colors.surface,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          border: `1px solid ${theme.colors.border}`, fontSize: '0.7rem'
+                        }}>
+                          <Badge variant="solid" color={isSuggested ? theme.colors.success : theme.colors.accent} style={{ padding: 0, minWidth: 'auto', background: 'transparent' }}>
+                            {isSuggested ? '✦' : '•'}
+                          </Badge>
+                        </div>
+                        <span
+                          style={{ fontSize: '0.85rem', color: theme.colors.textDim, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          dangerouslySetInnerHTML={{ __html: renderTitle(entry.title) }}
+                        />
+                      </div>
+
+                      <div style={{ width: 130 }}>
+                        <Select
+                          value={refRelations[refId] || 'related_to'}
+                          onChange={ev => setRefRelations(prev => ({ ...prev, [refId]: ev.target.value }))}
+                          options={RELATION_TYPES.map(rt => ({ value: rt, label: rt.replace(/_/g, ' ') }))}
+                          style={{ fontSize: '0.75rem', height: 28, padding: '0 8px', background: 'transparent', border: 'none' }}
+                        />
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleRef(refId)}
+                        style={{ padding: 4, height: 26, width: 26, opacity: 0.6 }}
+                        icon={<X size={14} />}
+                      />
+                    </div>
+                  )
+                })}
+
+                {refs.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '24px 12px', color: theme.colors.textMuted, fontSize: '0.8rem', fontStyle: 'italic' }}>
+                    No active relations yet.
+                  </div>
+                )}
+              </div>
+            </CollapsibleSection>
           </div>
         </div>
 
         {/* Footer */}
         <div style={{
-          padding: '12px 20px', borderTop: '1px solid #2a2a33', display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between'
+          padding: '16px 20px',
+          borderTop: `1px solid ${theme.colors.border}`,
+          display: 'flex',
+          gap: 12,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: theme.colors.surface
         }}>
           {onDelete ? (
-            <button
+            <Button
+              variant="danger"
               onClick={onDelete}
-              className="btn-base btn-red"
-              style={{ paddingLeft: 14, display: 'flex', alignItems: 'center', gap: 6 }}
+              icon={<Trash2 size={16} />}
             >
-              <Trash2 size={16} /> Delete
-            </button>
+              Delete
+            </Button>
           ) : <div />}
 
-          <div style={{ display: 'flex', gap: 8, flex: 1, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 10, flex: 1, justifyContent: 'flex-end' }}>
             {initial?.id && (
-              <input
-                value={versionNote} onChange={e => setVersionNote(e.target.value)} placeholder="Version note (optional)…"
-                style={{ ...inputStyle, width: 180, fontSize: '0.8rem' }}
+              <Input
+                value={versionNote}
+                onChange={e => setVersionNote(e.target.value)}
+                placeholder="Commit message (optional)…"
+                style={{ width: 220 }}
               />
             )}
-            <button onClick={onCancel} className="btn-base btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <X size={16} /> Cancel
-            </button>
-            <button onClick={handleSave} disabled={saving} className="btn-base btn-gold" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Save size={16} /> {saving ? 'Saving…' : 'Save Entry'}
-            </button>
+            <Button variant="outline" onClick={onCancel} icon={<X size={16} />}>
+              Cancel
+            </Button>
+            <Button
+              variant="gold"
+              onClick={handleSave}
+              disabled={saving}
+              icon={<Save size={16} />}
+            >
+              {saving ? 'Saving…' : 'Save Entry'}
+            </Button>
           </div>
         </div>
       </div>
@@ -407,48 +745,74 @@ export default function EntryEditor({ initial, allEntries = [], sources = [], on
       <div
         onMouseDown={startResizing}
         style={{
-          width: 6, cursor: 'col-resize', zIndex: 50,
-          background: '#2a2a33', transition: 'background 0.2s',
-          margin: '0 -3px', position: 'relative'
+          width: 4, cursor: 'col-resize', zIndex: 50,
+          background: theme.colors.border,
+          transition: theme.animations.fast,
+          margin: '0 -2px', position: 'relative'
         }}
-        onMouseEnter={e => e.currentTarget.style.background = '#c9a84c'}
-        onMouseLeave={e => e.currentTarget.style.background = '#2a2a33'}
+        onMouseEnter={e => e.currentTarget.style.background = theme.colors.accent}
+        onMouseLeave={e => e.currentTarget.style.background = theme.colors.border}
       />
 
       {/* ── RIGHT: Live Preview ── */}
       <div style={{
-        flex: 1, display: 'flex', flexDirection: 'column',
-        overflow: 'hidden', background: '#0e0e10',
+        flex: 1,
+        minWidth: 0, // Truly flexible
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        background: theme.colors.background,
+        zIndex: 1,
+        position: 'relative'
       }}>
         <div style={{
-          padding: '10px 20px', borderBottom: '1px solid #2a2a33', fontSize: '0.72rem',
-          color: '#7a7870', textTransform: 'uppercase', letterSpacing: '0.1em'
+          padding: '14px 24px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          fontSize: '0.7rem',
+          color: theme.colors.textMuted,
+          textTransform: 'uppercase',
+          letterSpacing: '0.15em',
+          fontWeight: 700
         }}>
           Live Preview
         </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
-          <div style={{
-            display: 'inline-block', background: `rgba(${typeColorRGB(type)},0.1)`,
-            color: typeColor(type), fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.7rem',
-            fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em',
-            padding: '3px 8px', borderRadius: 4, marginBottom: 10
-          }}>
+        <div style={{
+          flex: 1,
+          overflowX: 'hidden',
+          overflowY: 'auto',
+          padding: '32px 24px',
+          width: '100%',
+          maxWidth: 'none'
+        }}>
+          <Badge variant="solid" color={TYPE_COLORS[type]} style={{ marginBottom: 16 }}>
             {type}
-          </div>
-          <h2 style={{ fontFamily: 'EB Garamond, serif', fontSize: '1.7rem', marginBottom: 20, lineHeight: 1.2 }}>
-            <span dangerouslySetInnerHTML={{ __html: renderTitle(title) || '<span style="color:#7a7870">Untitled</span>' }} />
-          </h2>
+          </Badge>
 
-          <div
-            ref={previewRef}
-            style={{ fontFamily: 'EB Garamond, serif', fontSize: '1.05rem', lineHeight: 1.8, color: '#ccc8c0' }}
-          />
+          <h2 style={{
+            fontFamily: theme.typography.serif,
+            fontSize: '2.4rem',
+            marginBottom: 24,
+            lineHeight: 1.1,
+            color: theme.colors.accent,
+            overflowWrap: 'break-word',
+            wordBreak: 'break-word'
+          }}>
+            <span dangerouslySetInnerHTML={{ __html: renderTitle(title) || '<span style="opacity:0.3">Untitled Archive</span>' }} />
+          </h2>
+          <MathRenderer content={content} />
+
           {tags && (
-            <div style={{ marginTop: 24, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div style={{ marginTop: 40, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {tags.split(',').map(t => t.trim()).filter(Boolean).map(t => (
                 <span key={t} style={{
-                  fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.72rem',
-                  padding: '3px 9px', borderRadius: 20, border: '1px solid #2a2a33', color: '#7a7870'
+                  fontFamily: theme.typography.sans,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '4px 12px',
+                  borderRadius: 20,
+                  border: `1px solid ${theme.colors.border}`,
+                  color: theme.colors.textMuted,
+                  background: theme.colors.surface
                 }}>#{t}</span>
               ))}
             </div>
@@ -458,11 +822,3 @@ export default function EntryEditor({ initial, allEntries = [], sources = [], on
     </div>
   )
 }
-
-// Style helpers
-const inputStyle: React.CSSProperties = { background: '#1e1e24', border: '1px solid #2a2a33', borderRadius: 6, color: '#e8e6df', fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.85rem', padding: '7px 10px', outline: 'none' }
-const chipStyle: React.CSSProperties = { fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.72rem', padding: '3px 8px', borderRadius: 4, border: '1px solid #2a2a33', background: 'transparent', color: '#7a7870', cursor: 'pointer', transition: 'all 0.15s' }
-const TYPE_COLORS: Record<string, string> = { definition: '#6b8fcc', theorem: '#c96b6b', lemma: '#8fcc8f', corollary: '#cc6ba8', example: '#cc9f6b', remark: '#a06bcc' }
-const TYPE_RGB: Record<string, string> = { definition: '107,143,204', theorem: '201,107,107', lemma: '143,204,143', corollary: '204,107,168', example: '204,159,107', remark: '160,107,204' }
-const typeColor = (t: string) => TYPE_COLORS[t] || '#c9a84c'
-const typeColorRGB = (t: string) => TYPE_RGB[t] || '201,168,76'

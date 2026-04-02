@@ -1,36 +1,27 @@
+'use client'
+
 import React from 'react'
 import { renderTitle } from '@/lib/core/math'
-import { Entry } from '@/types'
+import { Entry, DeletedItem } from '@/types'
 import {
   LayoutDashboard,
   Library,
   Network,
-  ChevronDown,
-  ChevronUp,
-  RotateCcw,
-  Plus,
-  FileJson,
-  ArrowRight,
-  BookOpen,
-  Square,
-  CheckSquare,
   Trash2,
-  FileText,
+  BookOpen,
+  Plus,
   PanelLeft
 } from 'lucide-react'
-
+import { theme } from '@/lib/core/theme'
+import Button from '@/components/ui/Button'
 
 interface SidebarProps {
   sidebarOpen: boolean
   activeView: 'dashboard' | 'entries' | 'graph' | 'entry' | 'sources' | 'deleted'
   goToView: (view: 'dashboard' | 'entries' | 'graph' | 'sources' | 'deleted') => void
-  deletedEntries: Entry[]
+  deletedEntries: DeletedItem[]
   onNewEntry: () => void
-}
-
-const TYPE_COLORS: Record<string, string> = {
-  definition: '#6b8fcc', theorem: '#c96b6b', lemma: '#8fcc8f',
-  corollary: '#cc6ba8', example: '#cc9f6b', remark: '#a06bcc'
+  onToggleSidebar: () => void
 }
 
 export default function Sidebar({
@@ -38,85 +29,123 @@ export default function Sidebar({
   deletedEntries,
   onNewEntry,
   onToggleSidebar
-}: SidebarProps & { onToggleSidebar: () => void }) {
+}: SidebarProps) {
   const [logoHover, setLogoHover] = React.useState(false)
+
   return (
     <div style={{
       width: sidebarOpen ? 272 : 72,
       minWidth: sidebarOpen ? 272 : 72,
-      background: '#16161a',
-      borderRight: '1px solid #2a2a33',
+      background: theme.colors.background,
+      borderRight: `1px solid ${theme.colors.border}`,
       display: 'flex',
       flexDirection: 'column',
       overflow: 'visible',
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      transition: theme.animations.normal,
       position: 'relative',
       zIndex: 50
     }}>
       {/* LOGO & TOGGLE ALANI */}
-      <div
-        style={{ padding: sidebarOpen ? '16px 20px' : '16px 0', height: 64, boxSizing: 'border-box', borderBottom: '1px solid #2a2a33', display: 'flex', alignItems: 'center', justifyContent: sidebarOpen ? 'space-between' : 'center', transition: 'all 0.3s', userSelect: 'none' }}>
-
+      <div style={{
+        padding: sidebarOpen ? '16px 20px' : '16px 0',
+        height: 64,
+        boxSizing: 'border-box',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: sidebarOpen ? 'space-between' : 'center',
+        transition: theme.animations.normal,
+        userSelect: 'none'
+      }}>
         {sidebarOpen ? (
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-            <div style={{ animation: 'fadeIn 0.2s ease-in' }}>
-              <div style={{ fontFamily: 'EB Garamond, serif', fontSize: '1.4rem', color: '#c9a84c', fontWeight: 600, lineHeight: 1 }}>∂ MathBase</div>
-              <div style={{ fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.65rem', color: '#7a7870', marginTop: 4, letterSpacing: '0.05em' }}>KNOWLEDGE REPOSITORY</div>
+            <div style={{ animation: `fadeIn ${theme.animations.fast}` }}>
+              <div style={{ fontFamily: theme.typography.serif, fontSize: '1.4rem', color: theme.colors.accent, fontWeight: 600, lineHeight: 1 }}>∂ MathBase</div>
+              <div style={{ fontFamily: theme.typography.sans, fontSize: '0.65rem', color: theme.colors.textMuted, marginTop: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>KNOWLEDGE REPOSITORY</div>
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onToggleSidebar}
-              style={{ background: 'transparent', border: 'none', color: '#7a7870', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, flexShrink: 0, borderRadius: 6, transition: 'all 0.2s' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.background = '#2a2a33'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#7a7870'; e.currentTarget.style.background = 'transparent'; }}
-            >
-              <PanelLeft size={18} />
-            </button>
+              style={{ width: 32, height: 32, padding: 0 }}
+              icon={<PanelLeft size={18} />}
+            />
           </div>
         ) : (
           <div
             onClick={onToggleSidebar}
             onMouseEnter={() => setLogoHover(true)}
             onMouseLeave={() => setLogoHover(false)}
-            style={{ width: 32, height: 32, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', cursor: 'pointer', background: logoHover ? '#2a2a33' : 'transparent', borderRadius: 6 }}>
+            style={{
+              width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: theme.animations.fast, cursor: 'pointer',
+              background: logoHover ? theme.colors.surface : 'transparent', borderRadius: 6
+            }}
+          >
             {logoHover ? (
-              <PanelLeft size={18} color="#e8e6df" style={{ animation: 'fadeIn 0.2s ease-in' }} />
+              <PanelLeft size={18} color={theme.colors.text} style={{ animation: `fadeIn ${theme.animations.fast}` }} />
             ) : (
-              <div style={{ fontFamily: 'EB Garamond, serif', fontSize: '1.2rem', color: '#c9a84c', fontWeight: 600, animation: 'fadeIn 0.2s ease-in' }}>MB</div>
+              <div style={{ fontFamily: theme.typography.serif, fontSize: '1.2rem', color: theme.colors.accent, fontWeight: 600 }}>MB</div>
             )}
           </div>
         )}
       </div>
 
       {/* Ana Navigasyon */}
-      <div style={{ padding: sidebarOpen ? '20px 12px' : '20px 8px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-        {sidebarOpen && <div style={{ fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#7a7870', paddingLeft: 8, marginBottom: 4 }}>Views</div>}
-        <NavButton active={activeView === 'dashboard'} onClick={() => goToView('dashboard')} icon={<LayoutDashboard size={18} strokeWidth={2} />} label="Dashboard" sidebarOpen={sidebarOpen} />
-        <NavButton active={activeView === 'entries'} onClick={() => goToView('entries')} icon={<Library size={18} strokeWidth={2} />} label="All Entries" sidebarOpen={sidebarOpen} />
-        <NavButton active={activeView === 'graph'} onClick={() => goToView('graph')} icon={<Network size={18} strokeWidth={2} />} label="Graph View" sidebarOpen={sidebarOpen} />
-        <NavButton active={activeView === 'sources'} onClick={() => goToView('sources')} icon={<BookOpen size={18} strokeWidth={2} />} label="Sources" sidebarOpen={sidebarOpen} />
-        <NavButton active={activeView === 'deleted'} onClick={() => goToView('deleted')} icon={<Trash2 size={18} strokeWidth={2} />} label={`Recently Deleted${deletedEntries.length > 0 ? ` (${deletedEntries.length})` : ''}`} sidebarOpen={sidebarOpen} isRed />
-
+      <div style={{ padding: sidebarOpen ? '20px 12px' : '20px 8px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+        {sidebarOpen && (
+          <div style={{
+            fontFamily: theme.typography.sans, fontSize: '0.65rem', textTransform: 'uppercase',
+            letterSpacing: '0.1em', color: theme.colors.textMuted, paddingLeft: 8, marginBottom: 8
+          }}>
+            Views
+          </div>
+        )}
+        <NavButton active={activeView === 'dashboard'} onClick={() => goToView('dashboard')} icon={<LayoutDashboard size={18} />} label="Dashboard" sidebarOpen={sidebarOpen} />
+        <NavButton active={activeView === 'entries'} onClick={() => goToView('entries')} icon={<Library size={18} />} label="All Entries" sidebarOpen={sidebarOpen} />
+        <NavButton active={activeView === 'graph'} onClick={() => goToView('graph')} icon={<Network size={18} />} label="Graph View" sidebarOpen={sidebarOpen} />
+        <NavButton active={activeView === 'sources'} onClick={() => goToView('sources')} icon={<BookOpen size={18} />} label="Sources" sidebarOpen={sidebarOpen} />
+        <NavButton active={activeView === 'deleted'} onClick={() => goToView('deleted')} icon={<Trash2 size={18} />} label="Trash" sidebarOpen={sidebarOpen} count={deletedEntries.length} isRed />
       </div>
 
       {/* Footer Actions */}
-      <div style={{ padding: sidebarOpen ? '16px 16px' : '16px 8px', borderTop: '1px solid #2a2a33', display: 'flex', flexDirection: 'column', gap: 6, alignItems: sidebarOpen ? 'stretch' : 'center' }}>
-        <button
+      <div style={{
+        padding: sidebarOpen ? '16px 16px' : '16px 8px',
+        borderTop: `1px solid ${theme.colors.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6
+      }}>
+        <Button
+          variant="gold"
           onClick={onNewEntry}
-          className="btn-base btn-gold btn-gold-solid group-hover-gold"
-          title={!sidebarOpen ? "New Entry" : undefined}
-          style={{ width: sidebarOpen ? '100%' : '44px', height: sidebarOpen ? '40px' : '44px', padding: sidebarOpen ? '6px 14px' : '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: '0.9rem', fontWeight: 700, borderRadius: 8, transition: 'all 0.2s ease-in-out' }}
+          fullWidth={sidebarOpen}
+          style={{ height: sidebarOpen ? 42 : 44, padding: sidebarOpen ? undefined : 0 }}
+          icon={<Plus size={18} strokeWidth={2.5} />}
         >
-          <Plus size={18} strokeWidth={2.5} /> {sidebarOpen && <span>New Entry</span>}
-        </button>
+          {sidebarOpen && "New Entry"}
+        </Button>
       </div>
     </div>
   )
 }
 
-function NavButton({ active, onClick, icon, label, sidebarOpen, isRed }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string, sidebarOpen: boolean, isRed?: boolean }) {
-  const color = active ? (isRed ? '#c96b6b' : '#c9a84c') : '#b8b5ae'
-  const hoverColor = active ? color : '#e8e6df'
+interface NavButtonProps {
+  active: boolean
+  onClick: () => void
+  icon: React.ReactNode
+  label: string
+  sidebarOpen: boolean
+  count?: number
+  isRed?: boolean
+}
+
+function NavButton({ active, onClick, icon, label, sidebarOpen, count, isRed }: NavButtonProps) {
   const [hover, setHover] = React.useState(false)
+
+  const baseColor = active
+    ? (isRed ? theme.colors.danger : theme.colors.accent)
+    : theme.colors.textDim
 
   return (
     <button
@@ -124,45 +153,70 @@ function NavButton({ active, onClick, icon, label, sidebarOpen, isRed }: { activ
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: sidebarOpen ? '8px 12px' : '8px 0',
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '10px 14px',
         justifyContent: sidebarOpen ? 'flex-start' : 'center',
-        border: 'none', borderRadius: 6, cursor: 'pointer',
-        fontFamily: 'Instrument Sans, sans-serif', fontWeight: 600, fontSize: '0.85rem',
-        background: active ? '#1e1e24' : (hover ? '#1e1e24' : 'transparent'),
-        color: hover ? hoverColor : color,
+        border: 'none', borderRadius: 10, cursor: 'pointer',
+        fontFamily: theme.typography.sans, fontWeight: 600, fontSize: '0.9rem',
+        background: hover ? theme.colors.surfaceHover : 'transparent',
+        color: active ? (isRed ? theme.colors.danger : theme.colors.accent) : (hover ? theme.colors.text : theme.colors.textMuted),
         width: '100%',
         position: 'relative',
-        transition: 'all 0.2s ease'
+        transition: theme.animations.fast,
+        outline: 'none',
+        boxShadow: 'none'
       }}
     >
-      {/* Accent Bar */}
-      <div style={{
-        position: 'absolute', left: 0, top: 4, bottom: 4, width: 3,
-        background: active ? (isRed ? '#c96b6b' : '#c9a84c') : 'transparent',
-        borderRadius: '0 4px 4px 0',
-        transition: 'background 0.2s',
-        display: 'block' // Ensure visibility even when collapsed
-      }} />
+      {/* Active Indicator Bar */}
+      {active && (
+        <div style={{
+          position: 'absolute', left: 0, top: 8, bottom: 8, width: 3,
+          background: isRed ? theme.colors.danger : theme.colors.accent,
+          borderRadius: '0 4px 4px 0'
+        }} />
+      )}
 
-      {icon}
+      {/* Icon with drop-shadow glow */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        transition: 'filter 0.3s ease-in-out',
+        filter: (active || hover) ? `drop-shadow(0 0 8px ${isRed ? theme.colors.danger : theme.colors.accent})` : 'none'
+      }}>
+        {icon}
+      </div>
+
       {sidebarOpen ? (
-        <span style={{ transition: 'opacity 0.2s', opacity: 1, whiteSpace: 'nowrap' }}>{label}</span>
+        <>
+          <span style={{ flex: 1, textAlign: 'left', whiteSpace: 'nowrap' }}>{label}</span>
+          {count !== undefined && count > 0 && (
+            <span style={{
+              fontSize: '0.75rem',
+              background: isRed ? `${theme.colors.danger}22` : theme.colors.surface,
+              color: isRed ? theme.colors.danger : theme.colors.textMuted,
+              padding: '2px 6px',
+              borderRadius: 4
+            }}>
+              {count}
+            </span>
+          )}
+        </>
       ) : (
         /* Tooltip Preview */
         <div style={{
           position: 'absolute', left: '100%', marginLeft: 12,
-          padding: '6px 12px', background: 'rgba(22, 22, 26, 0.85)',
-          backdropFilter: 'blur(8px)', border: '1px solid #2a2a33',
-          borderRadius: 6, color: '#e8e6df', fontSize: '0.8rem', whiteSpace: 'nowrap',
+          padding: '8px 12px', background: theme.colors.surface,
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: 8, color: theme.colors.text, fontSize: '0.85rem', whiteSpace: 'nowrap',
           pointerEvents: 'none',
           opacity: hover ? 1 : 0,
           transform: `translateX(${hover ? 0 : -5}px)`,
-          transition: 'all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
+          transition: theme.animations.normal,
           zIndex: 100,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
         }}>
-          {label}
+          {label} {count !== undefined && count > 0 && `(${count})`}
         </div>
       )}
     </button>

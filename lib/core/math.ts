@@ -1,4 +1,5 @@
-// lib/math.ts - KaTeX tabanlı render
+import 'katex/dist/katex.min.css'
+import katex from 'katex'
 
 const SUP: Record<string, string> = {
   '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
@@ -13,17 +14,18 @@ function toSup(n: string): string { return n.split('').map(d => SUP[d] || d).joi
 function toSub(n: string): string { return n.split('').map(d => SUB[d] || d).join('') }
 
 function katexRender(math: string, display: boolean): string {
-  if (typeof window === 'undefined') return math
   try {
-    const katex = require('katex')
-    return katex.renderToString(math, { displayMode: display, throwOnError: false, output: 'html' })
+    return katex.renderToString(math, { displayMode: display, throwOnError: false, output: 'html', trust: true })
   } catch {
     return math
   }
 }
 
-// Başlıklar için — KaTeX kullan, $...$ dışını unicode ile işle
+/**
+ * Renders mathematical titles with KaTeX for $ delimiters and Unicode for simple exponents.
+ */
 export function renderTitle(title: string): string {
+  if (!title) return ''
   return title
     .replace(/\$([^$]+)\$/g, (_, m) => katexRender(m, false))
     .replace(/\^{(\d+)}/g, (_, n) => toSup(n))
@@ -32,27 +34,30 @@ export function renderTitle(title: string): string {
     .replace(/_(\d)/g, (_, n) => toSub(n))
 }
 
-
-// İçerik için — tam KaTeX render
+/**
+ * Renders full mathematical content with KaTeX and basic Markdown support.
+ */
 export function renderContent(content: string): string {
+  if (!content) return ''
   return content
     // Markdown headers
     .replace(/^### (.*)/gm, '<h3 style="font-size:1rem;margin:1em 0 0.5em;color:#e8e6df">$1</h3>')
     .replace(/^## (.*)/gm, '<h2 style="font-size:1.1rem;margin:1em 0 0.5em;color:#e8e6df">$1</h2>')
     .replace(/^# (.*)/gm, '<h1 style="font-size:1.2rem;margin:1em 0 0.5em;color:#e8e6df">$1</h1>')
-    // Markdown liste
+    // Markdown lists
     .replace(/^\d+\. (.*)/gm, '<div style="margin:4px 0;padding-left:16px">$1</div>')
     .replace(/^[-*] (.*)/gm, '<div style="margin:4px 0;padding-left:16px">• $1</div>')
-    // Yatay çizgi
+    // Horizontal rule
     .replace(/^---$/gm, '<hr style="border-color:#2a2a33;margin:1em 0"/>')
     // Bold/italic
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    // Math
+    // KaTeX Block & Inline
     .replace(/\$\$([\s\S]*?)\$\$/g, (_, m) => katexRender(m.trim(), true))
     .replace(/\$((?:[^$]|\\.)*?)\$/g, (_, m) => katexRender(m, false))
-    // Paragraflar
+    // Paragraphs
     .split('\n\n')
     .map(p => p.trim() ? `<p style="margin-bottom:1em">${p}</p>` : '')
     .join('')
 }
+

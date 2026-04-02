@@ -43,6 +43,23 @@ export async function POST(req: NextRequest) {
         )
     }
 
+    // Check if relation already exists between these two entries
+    const existing = await prisma.relation.findFirst({
+        where: { fromEntryId, toEntryId }
+    })
+
+    if (existing) {
+        const updated = await prisma.relation.update({
+            where: { id: existing.id },
+            data: { 
+                relationType,
+                confidence: confidence ?? existing.confidence,
+                createdBy: createdBy || existing.createdBy
+            }
+        })
+        return NextResponse.json(updated, { status: 200 })
+    }
+
     const relation = await prisma.relation.create({
         data: {
             fromEntryId,

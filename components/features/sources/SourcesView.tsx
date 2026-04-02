@@ -1,11 +1,13 @@
-// app/components/SourcesView.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, X, Save, BookOpen, Square, CheckSquare, Eye } from 'lucide-react'
 import Pagination from '@/components/ui/Pagination'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
+import Select from '@/components/ui/Select'
+import { theme } from '@/lib/core/theme'
 import { Source } from '@/types'
-
 
 interface Props {
     sources: Source[]
@@ -64,65 +66,77 @@ export default function SourcesView({ sources, onReload }: Props) {
     }
 
     return (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '40px 60px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, minHeight: 36 }}>
-                <h2 style={{ fontFamily: 'EB Garamond, serif', fontSize: '2.2rem', color: '#c9a84c', fontWeight: 400, margin: 0, display: 'flex', alignItems: 'center' }}>
-                    <BookOpen size={28} style={{ marginRight: 10 }} /> Sources
+        <div style={{ flex: 1, overflowY: 'auto', padding: '40px 60px', background: theme.colors.background }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, minHeight: 48 }}>
+                <h2 style={{ fontFamily: theme.typography.serif, fontSize: '2.5rem', color: theme.colors.accent, fontWeight: 400, margin: 0, display: 'flex', alignItems: 'center' }}>
+                    <BookOpen size={32} style={{ marginRight: 16 }} /> Sources
                 </h2>
+                <style>{`
+                    .row-hover-group:hover { background: ${theme.colors.surfaceHover} !important; }
+                    .row-actions { opacity: 1; display: flex; gap: 6; justify-content: center; align-items: center; transition: all 0.2s ease-in-out; }
+                `}</style>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'flex-end' }}>
-                    <span style={{ fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.85rem', color: '#7a7870', whiteSpace: 'nowrap' }}>{sources.length} {sources.length === 1 ? 'source' : 'sources'} found</span>
+                    <span style={{ fontFamily: theme.typography.sans, fontSize: '0.9rem', color: theme.colors.textMuted, whiteSpace: 'nowrap' }}>{sources.length} records</span>
                     {selectedSourceIds.size > 0 && (
-                        <button onClick={handleBulkDelete} className="btn-base btn-red">
-                            <Trash2 size={16} /> Delete Selected ({selectedSourceIds.size})
-                        </button>
+                        <Button variant="danger" onClick={handleBulkDelete} icon={<Trash2 size={16} />}>
+                            Delete ({selectedSourceIds.size})
+                        </Button>
                     )}
-                    <button onClick={() => { resetForm(); setShowForm(true) }} className="btn-base btn-gold">
-                        <Plus size={16} /> Add Source
-                    </button>
+                    <Button variant="gold" onClick={() => { resetForm(); setShowForm(true) }} icon={<Plus size={16} />}>
+                        Add Source
+                    </Button>
                 </div>
             </div>
 
             {showForm && (
-                <div style={{ background: '#16161a', border: '1px solid #2a2a33', borderRadius: 8, padding: 20, marginBottom: 24 }}>
-                    <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.8rem', color: '#c9a84c', marginBottom: 12, fontWeight: 600 }}>
-                        {editId ? 'Edit Source' : 'New Source'}
+                <div style={{ background: theme.colors.surface, border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: 24, marginBottom: 32, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+                    <div style={{ fontFamily: theme.typography.sans, fontSize: '0.8rem', color: theme.colors.accent, marginBottom: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                        {editId ? 'Edit Source' : 'New Source Registration'}
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                        <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Title" style={inp} />
-                        <select value={form.sourceType} onChange={e => setForm(f => ({ ...f, sourceType: e.target.value }))} style={inp}>
-                            {SOURCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                        <input value={form.filepath} onChange={e => setForm(f => ({ ...f, filepath: e.target.value }))} placeholder="File path or URL" style={inp} />
-                        <input value={form.pageRange} onChange={e => setForm(f => ({ ...f, pageRange: e.target.value }))} placeholder="Page range (e.g. 1-50)" style={inp} />
-                        <input value={form.bibInfo} onChange={e => setForm(f => ({ ...f, bibInfo: e.target.value }))} placeholder="Bibliography info" style={{ ...inp, gridColumn: '1 / -1' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                        <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Source Title" label="Title" />
+                        <Select 
+                            value={form.sourceType} 
+                            onChange={e => setForm(f => ({ ...f, sourceType: e.target.value }))} 
+                            label="Type"
+                            options={SOURCE_TYPES.map(t => ({ value: t, label: t.toUpperCase() }))}
+                        />
+                        <Input value={form.filepath} onChange={e => setForm(f => ({ ...f, filepath: e.target.value }))} placeholder="File path or URL" label="Filepath" />
+                        <Input value={form.pageRange} onChange={e => setForm(f => ({ ...f, pageRange: e.target.value }))} placeholder="1-50" label="Page Range" />
+                        <Input value={form.bibInfo} onChange={e => setForm(f => ({ ...f, bibInfo: e.target.value }))} placeholder="Journal, DOI, ISBN..." label="Bibliography" style={{ gridColumn: '1 / -1' }} />
                     </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
-                        <button onClick={resetForm} className="btn-base btn-outline"><X size={14} /> Cancel</button>
-                        <button onClick={handleSave} className="btn-base btn-gold"><Save size={14} /> {editId ? 'Update' : 'Create'}</button>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'flex-end' }}>
+                        <Button variant="outline" onClick={resetForm} icon={<X size={16} />}>Cancel</Button>
+                        <Button variant="gold" onClick={handleSave} icon={<Save size={16} />}>{editId ? 'Update Source' : 'Create Source'}</Button>
                     </div>
                 </div>
             )}
 
             {/* Top pagination & Page Size */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontFamily: 'Instrument Sans', fontSize: '0.8rem', color: '#7a7870' }}>Rows per page:</span>
-                    <select
-                        value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                        style={{ background: '#1e1e24', color: '#e8e6df', border: '1px solid #2a2a33', borderRadius: 4, padding: '4px 8px', fontSize: '0.8rem', fontFamily: 'Instrument Sans', outline: 'none', cursor: 'pointer' }}>
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                        <option value={100}>100</option>
-                    </select>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontFamily: theme.typography.sans, fontSize: '0.85rem', color: theme.colors.textMuted, fontWeight: 600 }}>Records per page:</span>
+                    <div style={{ width: 80 }}>
+                        <Select
+                            value={itemsPerPage} 
+                            onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                            options={[
+                                { value: 10, label: '10' },
+                                { value: 25, label: '25' },
+                                { value: 50, label: '50' },
+                                { value: 100, label: '100' }
+                            ]}
+                        />
+                    </div>
                 </div>
                 <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             </div>
-            <div style={{ background: '#16161a', border: '1px solid #2a2a33', borderRadius: 8, overflow: 'hidden' }}>
+
+            <div style={{ background: theme.colors.surface, border: `1px solid ${theme.colors.border}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid #2a2a33', background: '#1e1e24' }}>
-                            <th style={{ ...th, width: 40, paddingRight: 0 }}>
+                        <tr style={{ borderBottom: `1px solid ${theme.colors.border}`, background: theme.colors.surfaceHover }}>
+                            <th style={{ padding: '12px 16px', width: 50 }}>
                                 <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
                                     onClick={() => {
                                         const newSet = new Set(selectedSourceIds)
@@ -131,53 +145,57 @@ export default function SourcesView({ sources, onReload }: Props) {
                                         else paginatedSources.forEach(s => newSet.delete(s.id))
                                         setSelectedSourceIds(newSet)
                                     }}>
-                                    {(paginatedSources.length > 0 && paginatedSources.every(s => selectedSourceIds.has(s.id))) ? <CheckSquare size={18} color="#c9a84c" /> : <Square size={18} color="#7a7870" />}
+                                    {(paginatedSources.length > 0 && paginatedSources.every(s => selectedSourceIds.has(s.id))) ? <CheckSquare size={18} color={theme.colors.accent} /> : <Square size={18} color={theme.colors.textMuted} />}
                                 </button>
                             </th>
-                            <th style={th}>Type</th><th style={th}>Title</th><th style={th}>File</th><th style={th}>Entries</th><th style={{ ...th, textAlign: 'right' }}>Actions</th>
+                            <th style={{ ...thStyle, width: 110 }}>Type</th>
+                            <th style={{ ...thStyle, width: '40%' }}>Title</th>
+                            <th style={{ ...thStyle, width: '25%' }}>File</th>
+                            <th style={{ ...thStyle, width: 120 }}>Entries</th>
+                            <th style={{ ...thStyle, textAlign: 'center', width: 120 }}>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody style={{ background: theme.colors.background }}>
                         {paginatedSources.length === 0 ? (
-                            <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#7a7870', fontFamily: 'Instrument Sans', fontSize: '0.9rem' }}>No sources yet. Add one above.</td></tr>
+                            <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center', color: theme.colors.textMuted, fontFamily: theme.typography.sans }}>No archive sources available.</td></tr>
                         ) : paginatedSources.map(s => (
-                            <tr key={s.id} style={{ borderBottom: '1px solid #2a2a33', transition: 'background 0.2s', cursor: 'pointer' }}
-                                onMouseEnter={el => {
-                                    el.currentTarget.style.background = '#1e1e24';
-                                    const actions = el.currentTarget.querySelector('.row-actions') as HTMLElement;
-                                    if (actions) actions.style.opacity = '1';
-                                }}
-                                onMouseLeave={el => {
-                                    el.currentTarget.style.background = 'transparent';
-                                    const actions = el.currentTarget.querySelector('.row-actions') as HTMLElement;
-                                    if (actions) actions.style.opacity = '0';
-                                }}
+                            <tr key={s.id} style={{ borderBottom: `1px solid ${theme.colors.border}`, transition: theme.animations.fast, cursor: 'pointer' }}
+                                className="row-hover-group"
+                                onClick={() => startEdit(s)}
                             >
-                                <td style={{ padding: '16px 0 16px 16px' }} onClick={ev => {
+                                <td style={{ padding: '12px 16px' }} onClick={ev => {
                                     ev.stopPropagation()
                                     const newSet = new Set(selectedSourceIds)
                                     if (selectedSourceIds.has(s.id)) newSet.delete(s.id); else newSet.add(s.id)
                                     setSelectedSourceIds(newSet)
                                 }}>
                                     <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}>
-                                        {selectedSourceIds.has(s.id) ? <CheckSquare size={18} color="#c9a84c" /> : <Square size={18} color="#7a7870" />}
+                                        {selectedSourceIds.has(s.id) ? <CheckSquare size={18} color={theme.colors.accent} /> : <Square size={18} color={theme.colors.textMuted} />}
                                     </button>
                                 </td>
-                                <td onClick={() => startEdit(s)} style={{ padding: 12 }}>
-                                    <span style={{ fontFamily: 'Instrument Sans', fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase', background: '#c9a84c22', color: '#c9a84c' }}>{s.sourceType}</span>
+                                <td style={{ padding: '12px 16px' }}>
+                                    <span style={{ 
+                                        fontFamily: theme.typography.sans, 
+                                        fontSize: '0.65rem', 
+                                        fontWeight: 700, 
+                                        padding: '4px 10px', 
+                                        borderRadius: 4, 
+                                        textTransform: 'uppercase', 
+                                        background: `${theme.colors.accent}15`, 
+                                        color: theme.colors.accent,
+                                        letterSpacing: '0.05em'
+                                    }}>{s.sourceType}</span>
                                 </td>
-                                <td onClick={() => startEdit(s)} style={{ padding: 12, fontFamily: 'EB Garamond', fontSize: '1.05rem', color: '#e8e6df' }}>{s.title}</td>
-                                <td onClick={() => startEdit(s)} style={{ padding: 12, fontFamily: 'Instrument Sans', fontSize: '0.8rem', color: '#7a7870' }}>{s.filepath || '—'}</td>
-                                <td onClick={() => startEdit(s)} style={{ padding: 12, fontFamily: 'Instrument Sans', fontSize: '0.8rem', color: '#7a7870' }}>{s._count?.entries || 0}</td>
-                                <td style={{ padding: 12, textAlign: 'right' }}>
-                                    <div className="row-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, opacity: 0, transition: 'opacity 0.2s ease-in-out' }}>
+                                <td style={{ padding: '12px 16px', fontFamily: theme.typography.serif, fontSize: '1.1rem', color: theme.colors.text }}>{s.title}</td>
+                                <td style={{ padding: '12px 16px', fontFamily: theme.typography.sans, fontSize: '0.85rem', color: theme.colors.textMuted }}>{s.filepath || '—'}</td>
+                                <td style={{ padding: '12px 16px', fontFamily: theme.typography.sans, fontSize: '0.85rem', color: theme.colors.textDim }}>{s._count?.entries || 0} items</td>
+                                <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                                    <div className="row-actions">
                                         {s.filepath && (
-                                            <button onClick={(e) => { e.stopPropagation(); window.open(s.filepath.startsWith('http') ? s.filepath : `${window.location.origin}/${s.filepath.replace(/^\/+/, '')}`, '_blank') }} className="icon-btn icon-btn-green" title="View Source">
-                                                <Eye size={15} />
-                                            </button>
-                                        )}
-                                        <button onClick={(e) => { e.stopPropagation(); startEdit(s) }} className="icon-btn icon-btn-gold" title="Edit"><Pencil size={15} /></button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDelete(s.id) }} className="icon-btn icon-btn-red" title="Delete"><Trash2 size={15} /></button>
+                                            <Button variant="ghost" size="sm" style={{ color: theme.colors.success }} onClick={(e) => { e.stopPropagation(); window.open(s.filepath.startsWith('http') ? s.filepath : `${window.location.origin}/${s.filepath.replace(/^\/+/, '')}`, '_blank') }} icon={<Eye size={15} />} />
+                                        )  }
+                                        <Button variant="ghost" size="sm" style={{ color: theme.colors.accent }} onClick={(e) => { e.stopPropagation(); startEdit(s) }} icon={<Pencil size={15} />} />
+                                        <Button variant="ghost" size="sm" style={{ color: theme.colors.danger }} onClick={(e) => { e.stopPropagation(); handleDelete(s.id) }} icon={<Trash2 size={15} />} />
                                     </div>
                                 </td>
                             </tr>
@@ -187,14 +205,19 @@ export default function SourcesView({ sources, onReload }: Props) {
             </div>
 
             {sources.length > itemsPerPage && (
-                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} style={{ marginTop: 24, padding: '0 8px' }} />
+                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} style={{ marginTop: 24 }} />
             )}
         </div>
     )
 }
 
-const inp: React.CSSProperties = { background: '#1e1e24', border: '1px solid #2a2a33', borderRadius: 6, color: '#e8e6df', fontFamily: 'Instrument Sans', fontSize: '0.85rem', padding: '8px 10px', outline: 'none' }
-const th: React.CSSProperties = { padding: 12, fontFamily: 'Instrument Sans', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#7a7870', fontWeight: 600 }
-const primaryBtn: React.CSSProperties = { fontFamily: 'Instrument Sans', fontSize: '0.8rem', fontWeight: 600, padding: '8px 16px', borderRadius: 6, border: 'none', background: '#c9a84c', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }
-const secBtn: React.CSSProperties = { fontFamily: 'Instrument Sans', fontSize: '0.8rem', padding: '8px 14px', borderRadius: 6, border: '1px solid #2a2a33', background: 'transparent', color: '#7a7870', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }
-const iconBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#7a7870', cursor: 'pointer', padding: '4px 6px' }
+const thStyle: React.CSSProperties = { 
+    padding: '12px 16px', 
+    fontFamily: theme.typography.sans, 
+    fontSize: '0.72rem', 
+    textTransform: 'uppercase', 
+    letterSpacing: '0.12em', 
+    color: theme.colors.textMuted, 
+    fontWeight: 700,
+    textAlign: 'left'
+}
