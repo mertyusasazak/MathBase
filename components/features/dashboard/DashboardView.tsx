@@ -2,8 +2,7 @@
 
 import React from 'react'
 import Card from '@/components/ui/Card'
-import Badge from '@/components/ui/Badge'
-import Button from '@/components/ui/Button'
+import { Button, Badge } from '@/components/ui/Common'
 import { theme } from '@/lib/core/theme'
 import { renderTitle } from '@/lib/core/math'
 import { Entry, Source } from '@/types'

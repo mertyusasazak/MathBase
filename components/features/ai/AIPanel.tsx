@@ -4,8 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { renderContent, renderTitle } from '@/lib/core/math'
 import { Sparkles, BrainCircuit, Send, RotateCcw } from 'lucide-react'
 import { theme } from '@/lib/core/theme'
-import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
+import { Button, Input } from '@/components/ui/Common'
 
 interface Props {
   entryId: number

@@ -4,9 +4,7 @@ import React from 'react'
 import { 
   Square, CheckSquare, Pencil, Trash2, ArrowUp, ArrowDown, Filter, Library
 } from 'lucide-react'
-import Button from '@/components/ui/Button'
-import Badge from '@/components/ui/Badge'
-import Select from '@/components/ui/Select'
+import { Button, Badge, Select } from '@/components/ui/Common'
 import Pagination from '@/components/ui/Pagination'
 import FilterBar from '@/components/features/entries/FilterBar'
 import { theme } from '@/lib/core/theme'

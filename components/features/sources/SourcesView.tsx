@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, X, Save, BookOpen, Square, CheckSquare, Eye } from 'lucide-react'
 import Pagination from '@/components/ui/Pagination'
-import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
-import Select from '@/components/ui/Select'
+import { Button, Input, Select } from '@/components/ui/Common'
 import { theme } from '@/lib/core/theme'
 import { Source } from '@/types'
 

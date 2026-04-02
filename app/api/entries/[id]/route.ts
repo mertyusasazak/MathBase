@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma, parseEntry, cleanOrphanRefs } from '@/lib/core/db'
 import { computeSimpleEmbedding } from '@/lib/services/ai'
-import { extractKeywords } from '@/lib/utils/keywords'
+import { extractKeywords } from '@/lib/utils'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const id = parseInt(params.id)

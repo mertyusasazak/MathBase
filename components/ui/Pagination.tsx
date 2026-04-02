@@ -2,8 +2,7 @@
 
 import React from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import Button from './Button'
-import Input from './Input'
+import { Button, Input } from './Common'
 import { theme } from '@/lib/core/theme'
 
 interface PaginationProps {

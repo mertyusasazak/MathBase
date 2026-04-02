@@ -4,15 +4,15 @@ import React from 'react'
 import {
   ArrowLeft, FileText, Pencil, Sparkles, X, ChevronLeft, ChevronRight, Key, BookOpen, ArrowRight, Link2
 } from 'lucide-react'
-import Button from '@/components/ui/Button'
-import Badge from '@/components/ui/Badge'
+import { Button, Badge } from '@/components/ui/Common'
 import { theme } from '@/lib/core/theme'
 import { renderTitle } from '@/lib/core/math'
 import { MathRenderer } from '@/lib/core/MathRenderer'
 import AIPanel from '@/components/features/ai/AIPanel'
 import { Entry, Source, Relation } from '@/types'
-import { TYPE_COLORS, RELATION_LABELS } from '@/lib/core/constants'
+import { TYPE_COLORS } from '@/lib/core/constants'
 import { exportToPDF } from '@/components/features/pdf/PDFExport'
+import { useReadingView } from '@/hooks/useReadingView'
 
 interface ReadingViewProps {
   selected: Entry
@@ -43,42 +43,12 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
   aiWidth,
   onStartResizingAI
 }) => {
-  const [expandKeywords, setExpandKeywords] = React.useState(false)
-
-  const getEntryRelations = (entryId: number) => {
-    const outgoing = relations.filter(r => r.fromEntryId === entryId)
-    const incoming = relations.filter(r => r.toEntryId === entryId)
-    return { outgoing, incoming }
-  }
-
-  const { outgoing, incoming } = getEntryRelations(selected.id)
-  const sections: { label: string; entries: { entry: Entry; rel: string }[] }[] = []
-
-  // Group outgoing by relation type
-  const outByType: Record<string, Entry[]> = {}
-  outgoing.forEach(r => {
-    const e = entries.find(x => x.id === r.toEntryId)
-    if (e) {
-      if (!outByType[r.relationType]) outByType[r.relationType] = []
-      outByType[r.relationType].push(e)
-    }
+  const { state, actions } = useReadingView({
+    selected,
+    entries,
+    relations,
+    sortedEntries
   })
-  Object.entries(outByType).forEach(([type, ents]) => {
-    sections.push({ label: RELATION_LABELS[type] || type.replace(/_/g, ' '), entries: ents.map(e => ({ entry: e, rel: type })) })
-  })
-
-  // Group incoming as "Used by"
-  const usedByMap = new Map<number, Entry>()
-  incoming.forEach(r => {
-    const e = entries.find(x => x.id === r.fromEntryId)
-    if (e) usedByMap.set(e.id, e)
-  })
-  if (usedByMap.size > 0) sections.push({ label: 'Used By', entries: Array.from(usedByMap.values()).map(e => ({ entry: e, rel: 'used_by' })) })
-
-  // Sequential Navigation
-  const currentIndex = sortedEntries.findIndex(e => e.id === selected.id)
-  const prevEntry = currentIndex > 0 ? sortedEntries[currentIndex - 1] : null
-  const nextEntry = currentIndex < sortedEntries.length - 1 ? sortedEntries[currentIndex + 1] : null
 
   const src = sources.find(s => s.id === selected.sourceId)
 
@@ -168,7 +138,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                 <Key size={12} /> Keywords
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {(expandKeywords ? selected.symbolKeywords : selected.symbolKeywords.slice(0, 5)).map(k => (
+                {(state.expandKeywords ? selected.symbolKeywords : selected.symbolKeywords.slice(0, 5)).map(k => (
                   <span key={k} style={{
                     fontFamily: 'Instrument Sans, sans-serif',
                     fontSize: '0.68rem',
@@ -179,10 +149,9 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                     color: '#7eb8b0'
                   }}>{k}</span>
                 ))}
-                {!expandKeywords && selected.symbolKeywords.length > 5 && (
+                {!state.expandKeywords && selected.symbolKeywords.length > 5 && (
                   <button
-                    onClick={() => setExpandKeywords(true)}
-                    title={selected.symbolKeywords.slice(5).join(', ')}
+                    onClick={() => actions.setExpandKeywords(true)}
                     style={{
                       background: 'transparent',
                       border: `1px solid ${theme.colors.accent}`,
@@ -209,9 +178,9 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                     +{selected.symbolKeywords.length - 5} more
                   </button>
                 )}
-                {expandKeywords && selected.symbolKeywords.length > 5 && (
+                {state.expandKeywords && selected.symbolKeywords.length > 5 && (
                   <button
-                    onClick={() => setExpandKeywords(false)}
+                    onClick={() => actions.setExpandKeywords(false)}
                     style={{
                       background: 'transparent',
                       border: `1px solid ${theme.colors.accent}`,
@@ -273,7 +242,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
             <MathRenderer content={selected.content} />
           </div>
 
-          {sections.length > 0 && (
+          {state.sections.length > 0 && (
             <div style={{ borderTop: '1px solid #2a2a33', paddingTop: 24 }}>
               <div style={{
                 fontFamily: 'Instrument Sans, sans-serif',
@@ -289,7 +258,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                 <Link2 size={14} /> Relationships
               </div>
               <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 8, display: 'flex', flexDirection: 'column', gap: 20 }}>
-                {sections.map(sec => (
+                {state.sections.map(sec => (
                   <div key={sec.label}>
                     <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.75rem', color: '#c9a84c', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{sec.label}</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
@@ -328,19 +297,19 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
 
           {/* SEQ NAV */}
           <div style={{ marginTop: 48, display: 'flex', justifyContent: 'space-between', gap: 20 }}>
-            {prevEntry ? (
-              <Button variant="outline" onClick={() => onSelectEntry(prevEntry)} style={{ flex: 1, height: 'auto', padding: '14px 20px', justifyContent: 'flex-start' }} icon={<ChevronLeft size={20} />}>
+            {state.prevEntry ? (
+              <Button variant="outline" onClick={() => onSelectEntry(state.prevEntry!)} style={{ flex: 1, height: 'auto', padding: '14px 20px', justifyContent: 'flex-start' }} icon={<ChevronLeft size={20} />}>
                 <div>
                   <div style={{ fontSize: '0.65rem', color: theme.colors.textMuted }}>Previous Entry</div>
-                  <div style={{ fontWeight: 600 }} dangerouslySetInnerHTML={{ __html: renderTitle(prevEntry.title) }} />
+                  <div style={{ fontWeight: 600 }} dangerouslySetInnerHTML={{ __html: renderTitle(state.prevEntry.title) }} />
                 </div>
               </Button>
             ) : <div style={{ flex: 1 }} />}
-            {nextEntry ? (
-              <Button variant="outline" onClick={() => onSelectEntry(nextEntry)} style={{ flex: 1, height: 'auto', padding: '14px 20px', justifyContent: 'flex-end' }} icon={<ChevronRight size={20} />} iconPosition="right">
+            {state.nextEntry ? (
+              <Button variant="outline" onClick={() => onSelectEntry(state.nextEntry!)} style={{ flex: 1, height: 'auto', padding: '14px 20px', justifyContent: 'flex-end' }} icon={<ChevronRight size={20} />} iconPosition="right">
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.65rem', color: theme.colors.textMuted }}>Next Entry</div>
-                  <div style={{ fontWeight: 600 }} dangerouslySetInnerHTML={{ __html: renderTitle(nextEntry.title) }} />
+                  <div style={{ fontWeight: 600 }} dangerouslySetInnerHTML={{ __html: renderTitle(state.nextEntry.title) }} />
                 </div>
               </Button>
             ) : <div style={{ flex: 1 }} />}

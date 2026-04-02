@@ -1,8 +1,7 @@
 'use client'
 
 import React from 'react'
-import { renderTitle } from '@/lib/core/math'
-import { Entry, DeletedItem } from '@/types'
+import { DeletedItem } from '@/types'
 import {
   LayoutDashboard,
   Library,
@@ -13,7 +12,8 @@ import {
   PanelLeft
 } from 'lucide-react'
 import { theme } from '@/lib/core/theme'
-import Button from '@/components/ui/Button'
+import { Button } from '@/components/ui/Common'
+import { useSidebarLogic } from '@/hooks/useSidebarLogic'
 
 interface SidebarProps {
   sidebarOpen: boolean
@@ -30,7 +30,7 @@ export default function Sidebar({
   onNewEntry,
   onToggleSidebar
 }: SidebarProps) {
-  const [logoHover, setLogoHover] = React.useState(false)
+  const { state, actions } = useSidebarLogic()
 
   return (
     <div style={{
@@ -74,15 +74,15 @@ export default function Sidebar({
         ) : (
           <div
             onClick={onToggleSidebar}
-            onMouseEnter={() => setLogoHover(true)}
-            onMouseLeave={() => setLogoHover(false)}
+            onMouseEnter={() => actions.setLogoHover(true)}
+            onMouseLeave={() => actions.setLogoHover(false)}
             style={{
               width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: theme.animations.fast, cursor: 'pointer',
-              background: logoHover ? theme.colors.surface : 'transparent', borderRadius: 6
+              background: state.logoHover ? theme.colors.surface : 'transparent', borderRadius: 6
             }}
           >
-            {logoHover ? (
+            {state.logoHover ? (
               <PanelLeft size={18} color={theme.colors.text} style={{ animation: `fadeIn ${theme.animations.fast}` }} />
             ) : (
               <div style={{ fontFamily: theme.typography.serif, fontSize: '1.2rem', color: theme.colors.accent, fontWeight: 600 }}>MB</div>
@@ -142,10 +142,6 @@ interface NavButtonProps {
 
 function NavButton({ active, onClick, icon, label, sidebarOpen, count, isRed }: NavButtonProps) {
   const [hover, setHover] = React.useState(false)
-
-  const baseColor = active
-    ? (isRed ? theme.colors.danger : theme.colors.accent)
-    : theme.colors.textDim
 
   return (
     <button

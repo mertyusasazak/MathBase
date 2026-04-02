@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma, parseEntry } from '@/lib/core/db'
 import { computeSimpleEmbedding } from '@/lib/services/ai'
-import { extractKeywords } from '@/lib/utils/keywords'
+import { extractKeywords } from '@/lib/utils'
 
 // GET /api/entries - Tüm entry'leri listele
 export async function GET(req: NextRequest) {
