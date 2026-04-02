@@ -1,0 +1,81 @@
+// prisma/schema.prisma
+// Local SQLite - production'da PostgreSQL'e geçmek için
+// provider'ı "postgresql" yap, url'yi DATABASE_URL env'e bağla
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./mathbase.db"
+}
+
+model Source {
+  id          Int      @id @default(autoincrement())
+  title       String
+  sourceType  String   // pdf | markdown | manual | book | paper | lecture
+  filepath    String   @default("")
+  pageRange   String   @default("")
+  bibInfo     String   @default("")
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  entries     Entry[]
+}
+
+model Entry {
+  id             Int      @id @default(autoincrement())
+  type           String   // definition | theorem | lemma | corollary | example | remark
+  title          String
+  content        String   // LaTeX + markdown
+  tags           String   // JSON array string olarak saklanır: '["analysis","topology"]'
+  refs           String   @default("[]") // JSON array of Entry IDs
+  embedding      String   @default("[]") // JSON float array - semantic search için
+  chatHistory    String   @default("[]") // Qwen AI sohbet geçmişini JSON olarak tutacak alan
+  sourceId       Int?
+  source         Source?  @relation(fields: [sourceId], references: [id])
+  pageRange      String   @default("")
+  symbolKeywords String   @default("[]") // JSON array of extracted keywords
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  versionNote    String?
+  isDeleted      Boolean  @default(false)
+
+  // Versiyon geçmişi
+  versions    EntryVersion[]
+}
+
+model Relation {
+  id            Int      @id @default(autoincrement())
+  fromEntryId   Int
+  toEntryId     Int
+  relationType  String   // uses | example_of | generalizes | proof_depends_on | related_to | contrasts_with
+  confidence    Float    @default(1.0)
+  createdBy     String   @default("user")
+  createdAt     DateTime @default(now())
+}
+
+model EntryVersion {
+  id        Int      @id @default(autoincrement())
+  entryId   Int
+  entry     Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  content   String
+  title     String
+  type      String
+  tags      String
+  refs      String
+  savedAt   DateTime @default(now())
+  note      String   @default("") // "Fixed proof step 2" gibi açıklama
+}
+
+model Tag {
+  id       Int    @id @default(autoincrement())
+  name     String @unique
+  parent   String @default("") // hiyerarşi: "functional-analysis" parent'ı "analysis"
+  color    String @default("") // override renk
+}
+
+model Settings {
+  key   String @id
+  value String
+}
