@@ -68,45 +68,56 @@ function MathBaseApp() {
             <div
               style={{
                 display: 'flex',
-                background: theme.colors.surface,
-                borderRadius: 20,
-                padding: 2,
-                position: 'relative',
-                width: 150,
-                height: 34,
+                background: 'rgba(30, 30, 40, 0.5)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: 999,
+                position: 'fixed',
+                width: '230px',
+                height: 38,
                 cursor: 'pointer',
-                border: `1px solid ${theme.colors.border}`,
-                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
+                border: `1px solid rgba(255, 255, 255, 0.05)`,
+                boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.5)',
+                userSelect: 'none',
+                overflow: 'hidden',
+                transition: 'border-color 0.3s ease'
               }}
               onClick={() => actions.setSearchMode(state.searchMode === 'text' ? 'semantic' : 'text')}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'}
             >
+              {/* VARIABLE WIDTH PILL */}
               <div style={{
                 position: 'absolute',
-                top: 3,
-                left: state.searchMode === 'text' ? 3 : 75,
-                width: 72,
-                height: 26,
-                background: theme.colors.accent,
-                borderRadius: 16,
-                transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                boxShadow: `0 2px 10px ${theme.colors.accent}66`,
+                top: '4px',
+                bottom: '4px',
+                left: state.searchMode === 'text' ? '7px' : '90px',
+                width: state.searchMode === 'text' ? '70px' : '80px',
+                background: `linear-gradient(135deg, ${theme.colors.accent} 0%, #e8bc5e 100%)`,
+                borderRadius: 999,
+                transition: 'all 0.5s cubic-bezier(0.23, 1, 0.32, 1)',
+                boxShadow: `0 4px 15px ${theme.colors.accent}33`,
                 zIndex: 1
               }} />
+              
               <div style={{
-                flex: 1, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
-                color: state.searchMode === 'text' ? theme.colors.background : theme.colors.textMuted,
-                transition: 'color 0.3s ease'
+                flex: 1, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em',
+                color: state.searchMode === 'text' ? '#000' : 'rgba(255, 255, 255, 0.4)',
+                transition: 'color 0.4s ease',
+                pointerEvents: 'none',
+                mixBlendMode: state.searchMode === 'text' ? 'normal' : 'plus-lighter'
               }}>
                 Text
               </div>
               <div style={{
-                flex: 1, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
-                color: state.searchMode === 'semantic' ? theme.colors.background : theme.colors.textMuted,
-                transition: 'color 0.3s ease'
+                flex: 1, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em',
+                color: state.searchMode === 'semantic' ? '#000' : 'rgba(255, 255, 255, 0.4)',
+                transition: 'color 0.4s ease',
+                pointerEvents: 'none',
+                mixBlendMode: state.searchMode === 'semantic' ? 'normal' : 'plus-lighter'
               }}>
-                <Sparkles size={12} /> AI
+                Semantic
               </div>
             </div>
           </div>
