@@ -71,7 +71,7 @@ function MathBaseApp() {
                 background: 'rgba(30, 30, 40, 0.5)',
                 backdropFilter: 'blur(8px)',
                 borderRadius: 999,
-                position: 'fixed',
+                position: 'relative',
                 width: '230px',
                 height: 38,
                 cursor: 'pointer',
