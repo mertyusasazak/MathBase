@@ -21,6 +21,55 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectEntry,
   onCreateEntry
 }) => {
+  const [importData, setImportData] = React.useState<any>(null)
+  const [importMode, setImportMode] = React.useState<'merge' | 'replace'>('merge')
+  const [isImporting, setIsImporting] = React.useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string)
+        if (json.version !== '1.0') {
+          alert('Invalid file version. Only version 1.0 is supported.')
+          return
+        }
+        setImportData(json)
+      } catch (err) {
+        alert('Error reading file. Please ensure it is a valid JSON file.')
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = ''
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  const confirmImport = async () => {
+    if (!importData) return
+    setIsImporting(true)
+    try {
+      const res = await fetch(`/api/import/json?mode=${importMode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(importData)
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Import failed')
+      
+      alert(`Import completed!\nImported: ${data.imported}\nSkipped: ${data.skipped}\n${data.errors?.length ? `Errors: ${data.errors.length}` : ''}`)
+      window.location.reload() // Dashboard'u tazelemek için
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setIsImporting(false)
+      setImportData(null)
+    }
+  }
+
   const recentEntries = [...entries]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5)
@@ -145,6 +194,83 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         >
           + Create your first entry
         </Button>
+      )}
+
+      {/* Yedekleme / Geri Yükleme Bölümü */}
+      <div style={{ width: '100%', maxWidth: 640, marginTop: 40, paddingTop: 32, borderTop: `1px solid ${theme.colors.border}` }}>
+        <div style={{
+          fontFamily: theme.typography.sans,
+          fontSize: '0.75rem',
+          textTransform: 'uppercase',
+          letterSpacing: '0.15em',
+          color: theme.colors.textMuted,
+          marginBottom: 16,
+          fontWeight: 700
+        }}>Backup & Restore</div>
+        
+        <div style={{ display: 'flex', gap: 16 }}>
+          <Button variant="outline" onClick={() => window.open('/api/export/json', '_self')}>
+            JSON Download
+          </Button>
+
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            JSON Upload
+          </Button>
+          <input 
+            type="file" 
+            accept="application/json" 
+            style={{ display: 'none' }} 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+          />
+        </div>
+      </div>
+
+      {/* İçe Aktarma Onay Modalı */}
+      {importData && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: theme.colors.surface, border: `1px solid ${theme.colors.border}`,
+            padding: 32, borderRadius: 16, width: 480, maxWidth: '90%',
+            fontFamily: theme.typography.sans
+          }}>
+            <h2 style={{ margin: '0 0 16px', color: theme.colors.text, fontFamily: theme.typography.serif }}>
+              İçe Aktarımı Onayla
+            </h2>
+            <div style={{ color: theme.colors.textDim, marginBottom: 24, fontSize: '0.9rem', lineHeight: 1.5 }}>
+              Yüklenen dosyada şunlar bulundu:
+              <ul style={{ margin: '12px 0 0 24px', padding: 0 }}>
+                <li>{importData.entries?.length || 0} Entries</li>
+                <li>{importData.sources?.length || 0} Sources</li>
+                <li>{importData.relations?.length || 0} Relations</li>
+                <li>{importData.tags?.length || 0} Tags</li>
+              </ul>
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontWeight: 600, color: theme.colors.text, marginBottom: 8, fontSize: '0.85rem' }}>İçe Aktarım Modu</div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: theme.colors.text, cursor: 'pointer', marginBottom: 6 }}>
+                <input type="radio" value="merge" checked={importMode === 'merge'} onChange={e => setImportMode(e.target.value as any)} />
+                <span style={{ fontSize: '0.85rem' }}>Merge (Sadece yeni olanları ekler, eski veriler korunur)</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e88787', cursor: 'pointer' }}>
+                <input type="radio" value="replace" checked={importMode === 'replace'} onChange={e => setImportMode(e.target.value as any)} />
+                <span style={{ fontSize: '0.85rem' }}>Replace (CİDDİ UYARI: Mevcut tüm DB silinir, sadece dosyadan yüklenir)</span>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <Button variant="ghost" onClick={() => setImportData(null)} disabled={isImporting}>Cancel</Button>
+              <Button variant="gold" onClick={confirmImport} disabled={isImporting}>
+                {isImporting ? 'Importing...' : 'Import'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

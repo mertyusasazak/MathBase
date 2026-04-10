@@ -1,4 +1,4 @@
-import { computeSimpleEmbedding, cosineSimilarity } from '@/lib/services/ai'
+import { findSimilar } from '@/lib/core/tfidf'
 
 /* ──── DUPLICATES ──── */
 export interface DuplicateCandidate {
@@ -8,6 +8,7 @@ export interface DuplicateCandidate {
   score: number
 }
 
+// TF-IDF benzerliğine göre özel eşik değeri, duruma göre esnetilebilir.
 const SIMILARITY_THRESHOLD = 0.6
 
 export function findDuplicates(
@@ -17,31 +18,21 @@ export function findDuplicates(
   excludeId?: number
 ): DuplicateCandidate[] {
   const queryText = title + ' ' + content
-  const queryVec = computeSimpleEmbedding(queryText)
-  const scored: DuplicateCandidate[] = []
+  
+  // Tüm doküman içerisinden en çok benzeyen 3 kayıt getirilir
+  const similarEntries = findSimilar(queryText, allEntries, 3, excludeId)
 
-  for (const entry of allEntries) {
-    if (excludeId && entry.id === excludeId) continue
-
-    let entryVec: number[]
-    if (entry.embedding && entry.embedding !== '[]') {
-      entryVec = JSON.parse(entry.embedding)
-    } else {
-      entryVec = computeSimpleEmbedding(entry.title + ' ' + entry.content)
-    }
-
-    const score = cosineSimilarity(queryVec, entryVec)
-    if (score >= SIMILARITY_THRESHOLD) {
-      scored.push({
-        id: entry.id,
-        title: entry.title,
-        type: entry.type,
-        score: Math.round(score * 100) / 100,
-      })
-    }
-  }
-
-  return scored.sort((a, b) => b.score - a.score).slice(0, 3)
+  // Gelen verilerden sadece bizim Threshold barajını geçenler filtrelenerek
+  // DuplicateCandidate (Kopya adayı) formatına döndürülür
+  return similarEntries
+    .filter(res => res.score >= SIMILARITY_THRESHOLD)
+    .map(res => ({
+      id: res.entry.id,
+      title: res.entry.title,
+      type: res.entry.type,
+      // Küsurat düzeltme (Örn: 0.8576 -> 0.86)
+      score: Math.round(res.score * 100) / 100,
+    }))
 }
 
 /* ──── KEYWORDS ──── */

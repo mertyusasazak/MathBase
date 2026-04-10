@@ -1,7 +1,6 @@
 // app/api/entries/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma, parseEntry, cleanOrphanRefs } from '@/lib/core/db'
-import { computeSimpleEmbedding } from '@/lib/services/ai'
 import { extractKeywords } from '@/lib/utils'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -48,8 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
   })
 
-  // Embedding güncelle
-  const embedding = computeSimpleEmbedding((title || existing.title) + ' ' + (content || existing.content))
+
 
   // Re-extract keywords
   const symbolKeywords = extractKeywords((title || existing.title) + ' ' + (content || existing.content))
@@ -66,7 +64,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       ...(sourceId !== undefined && { sourceId: sourceId || null }),
       ...(pageRange !== undefined && { pageRange }),
       ...(isDeleted !== undefined && { isDeleted }),
-      embedding: JSON.stringify(embedding),
       symbolKeywords: JSON.stringify(symbolKeywords),
     }
   })

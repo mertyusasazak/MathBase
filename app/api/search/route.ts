@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma, parseEntry } from '@/lib/core/db'
-import { computeSimpleEmbedding, cosineSimilarity } from '@/lib/services/ai'
+import { findSimilar } from '@/lib/core/tfidf'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -17,27 +17,27 @@ export async function GET(req: NextRequest) {
     select: {
       id: true, type: true, title: true, content: true,
       tags: true, refs: true, createdAt: true, updatedAt: true,
-      embedding: true, symbolKeywords: true,
-      sourceId: true, pageRange: true, versionNote: true,
+      symbolKeywords: true, sourceId: true, pageRange: true, versionNote: true,
     }
   })
 
-  const parsed = all.map(e => ({ ...parseEntry(e), rawEmbedding: e.embedding }))
+  const parsed = all.map(parseEntry)
 
   let results: any[]
 
   if (mode === 'semantic' || mode === 'combined') {
-    // Semantic: sorgu vektörü ile cosine similarity
-    const queryVec = computeSimpleEmbedding(q)
+    // TF-IDF tabanlı semantic arama (findSimilar) kullanımı
+    // Combined mode'da her kaydın skorunu bilmemiz gerektiği için limiti parsed.length olarak veriyoruz
+    const similarScores = findSimilar(q, parsed, parsed.length)
+    
+    // O(1) erişim için ID'ye göre skorları eşle
+    const scoreMap = new Map<number, number>()
+    similarScores.forEach(s => scoreMap.set(s.entry.id, s.score))
 
     const scored = parsed.map(e => {
-      let entryVec: number[] = JSON.parse(e.rawEmbedding || '[]')
-      if (entryVec.length === 0) {
-        entryVec = computeSimpleEmbedding(e.title + ' ' + e.content)
-      }
-      const semanticScore = entryVec.length ? cosineSimilarity(queryVec, entryVec) : 0
+      const semanticScore = scoreMap.get(e.id) || 0
 
-      // Text match score (now includes symbolKeywords)
+      // Eski text match score (symbolKeywords dahil)
       const keywordsMatch = e.symbolKeywords?.some((k: string) => k.toLowerCase().includes(q)) ? 0.2 : 0
       const textScore =
         (e.title.toLowerCase().includes(q) ? 0.3 : 0) +
@@ -49,11 +49,11 @@ export async function GET(req: NextRequest) {
         ? semanticScore * 0.6 + textScore * 0.4
         : semanticScore
 
-      return { ...e, _score: finalScore, rawEmbedding: undefined }
+      return { ...e, _score: finalScore }
     })
 
     results = scored
-      .filter(e => e._score > 0.05)
+      .filter(e => e._score > 0.02) // Düşük skorluları filtrele
       .sort((a, b) => b._score - a._score)
       .slice(0, limit)
 

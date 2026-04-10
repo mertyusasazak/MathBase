@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     const allEntries = await prisma.entry.findMany({
-        select: { id: true, title: true, type: true, content: true, embedding: true }
+        select: { id: true, title: true, type: true, content: true }
     })
 
     const duplicates = findDuplicates(title || '', content || '', allEntries, excludeId)

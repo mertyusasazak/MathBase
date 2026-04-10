@@ -53,3 +53,10 @@ export interface EntryOption {
   type: string;
   tags: string[];
 }
+
+export interface CandidateEntry {
+  type: string;
+  title: string;
+  content: string;
+  pageHint?: string;
+}

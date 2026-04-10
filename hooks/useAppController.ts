@@ -23,8 +23,7 @@ export function useAppController() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [search, setSearch] = useState('')
   const [searchMode, setSearchMode] = useState<'text' | 'semantic'>('text')
-  const [showAI, setShowAI] = useState(false)
-  const [aiWidth, setAiWidth] = useState(340)
+
   const [editorKey, setEditorKey] = useState(0)
 
   // Filters & Pagination
@@ -81,7 +80,7 @@ export function useAppController() {
   }, [searchParams, router, pathname])
 
   const goToView = (view: any) => { goToUrl({ view, entry: null }) }
-  const selectEntry = (e: Entry) => { setShowAI(false); goToUrl({ entry: e.id.toString(), view: null }) }
+  const selectEntry = (e: Entry) => { goToUrl({ entry: e.id.toString(), view: null }) }
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' | null = 'asc'
@@ -145,20 +144,7 @@ export function useAppController() {
     await refreshAll()
   }
 
-  const startResizingAI = useCallback((mouseDownEvent: React.MouseEvent) => {
-    mouseDownEvent.preventDefault()
-    const startX = mouseDownEvent.clientX
-    const startWidth = aiWidth
-    const onMouseMove = (me: MouseEvent) => { 
-      setAiWidth(Math.max(340, Math.min(800, startWidth + (startX - me.clientX)))) 
-    }
-    const onMouseUp = () => { 
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp) 
-    }
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-  }, [aiWidth])
+
 
   // Filtering processed data
   const filtered = entries.filter(e => {
@@ -179,17 +165,17 @@ export function useAppController() {
   return {
     state: {
       entries, sources, relations, deletedItems, loading,
-      activeView, selected, mode, sidebarOpen, search, searchMode, showAI, aiWidth, editorKey,
+      activeView, selected, mode, sidebarOpen, search, searchMode, editorKey,
       activeTags, activeTypes, activeTitles, showFilterDropdown, itemsPerPage, currentPage, deletedPage,
       selectedEntryIds, selectedDeletedIds, sortConfig, filtered
     },
     refs: { searchInputRef },
     actions: {
-      setActiveView, setSelected, setMode, setSidebarOpen, setSearch, setSearchMode, setShowAI, setEditorKey,
+      setActiveView, setSelected, setMode, setSidebarOpen, setSearch, setSearchMode, setEditorKey,
       setActiveTags, setActiveTypes, setActiveTitles, setShowFilterDropdown, setItemsPerPage, setCurrentPage, setDeletedPage,
       setSelectedEntryIds, setSelectedDeletedIds, 
       goToView, selectEntry, handleSort, handleSave, handleBulkDelete, handleBulkRestoreDeleted, 
-      handleBulkPermanentDelete, handleDeleteAllPermanently, startResizingAI, refreshAll, handleDelete, handleRestore, handlePermanentDelete
+      handleBulkPermanentDelete, handleDeleteAllPermanently, refreshAll, handleDelete, handleRestore, handlePermanentDelete
     }
   }
 }

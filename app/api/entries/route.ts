@@ -1,7 +1,6 @@
 // app/api/entries/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma, parseEntry } from '@/lib/core/db'
-import { computeSimpleEmbedding } from '@/lib/services/ai'
 import { extractKeywords } from '@/lib/utils'
 
 // GET /api/entries - Tüm entry'leri listele
@@ -38,9 +37,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'title and type are required' }, { status: 400 })
   }
 
-  // Embedding hesapla (semantic search için)
-  const embedding = computeSimpleEmbedding(title + ' ' + content)
-
   // Auto-extract keywords
   const symbolKeywords = extractKeywords(title + ' ' + (content || ''))
 
@@ -51,7 +47,6 @@ export async function POST(req: NextRequest) {
       content: content || '',
       tags: JSON.stringify(tags || []),
       refs: JSON.stringify(refs || []),
-      embedding: JSON.stringify(embedding),
       symbolKeywords: JSON.stringify(symbolKeywords),
       versionNote: versionNote || 'Initial version',
       sourceId: sourceId || null,

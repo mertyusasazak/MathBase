@@ -2,13 +2,12 @@
 
 import React from 'react'
 import {
-  ArrowLeft, FileText, Pencil, Sparkles, X, ChevronLeft, ChevronRight, Key, BookOpen, ArrowRight, Link2
+  ArrowLeft, FileText, Pencil, ChevronLeft, ChevronRight, Key, BookOpen, ArrowRight, Link2
 } from 'lucide-react'
 import { Button, Badge } from '@/components/ui/Common'
 import { theme } from '@/lib/core/theme'
 import { renderTitle } from '@/lib/core/math'
 import { MathRenderer } from '@/lib/core/MathRenderer'
-import AIPanel from '@/components/features/ai/AIPanel'
 import { Entry, Source, Relation } from '@/types'
 import { TYPE_COLORS } from '@/lib/core/constants'
 import { exportToPDF } from '@/components/features/pdf/PDFExport'
@@ -19,14 +18,10 @@ interface ReadingViewProps {
   entries: Entry[]
   sources: Source[]
   relations: Relation[]
-  showAI: boolean
-  setShowAI: (show: boolean) => void
   onEdit: () => void
   onBack: () => void
   onSelectEntry: (entry: Entry) => void
   sortedEntries: Entry[]
-  aiWidth: number
-  onStartResizingAI: (e: React.MouseEvent) => void
 }
 
 export const ReadingView: React.FC<ReadingViewProps> = ({
@@ -34,14 +29,10 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
   entries,
   sources,
   relations,
-  showAI,
-  setShowAI,
   onEdit,
   onBack,
   onSelectEntry,
   sortedEntries,
-  aiWidth,
-  onStartResizingAI
 }) => {
   const { state, actions } = useReadingView({
     selected,
@@ -85,15 +76,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <Button variant="outline" size="sm" onClick={() => exportToPDF([selected])} icon={<FileText size={14} />}>PDF</Button>
-            <Button
-              variant="success"
-              size="sm"
-              onClick={() => setShowAI(!showAI)}
-              icon={showAI ? <X size={14} /> : <Sparkles size={14} />}
-              style={{ border: `1px solid ${theme.colors.success}80`, background: `${theme.colors.success}10` }}
-            >
-              {showAI ? 'Hide AI' : 'Questions?'}
-            </Button>
             <Button variant="gold" size="sm" onClick={onEdit} icon={<Pencil size={14} />}>Edit</Button>
           </div>
         </div>
@@ -317,11 +299,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
         </div>
       </div>
 
-      {/* AI PANEL */}
-      <div style={{ display: showAI ? 'flex' : 'none', width: aiWidth, minWidth: 340, borderLeft: '1px solid #2a2a33', background: '#16161a', flexDirection: 'column', position: 'relative' }}>
-        <div onMouseDown={onStartResizingAI} style={{ position: 'absolute', top: 0, left: -3, width: 6, height: '100%', cursor: 'col-resize', zIndex: 50 }} />
-        <AIPanel entryId={selected.id} entryTitle={selected.title} />
-      </div>
     </div>
   )
 }

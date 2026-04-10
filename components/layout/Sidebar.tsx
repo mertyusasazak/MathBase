@@ -24,6 +24,10 @@ interface SidebarProps {
   onToggleSidebar: () => void
 }
 
+import { CandidateEntry } from '@/types'
+import { FileUp } from 'lucide-react'
+import ImportReviewModal from '@/components/features/pdf/ImportReviewModal'
+
 export default function Sidebar({
   sidebarOpen, activeView, goToView,
   deletedEntries,
@@ -31,6 +35,63 @@ export default function Sidebar({
   onToggleSidebar
 }: SidebarProps) {
   const { state, actions } = useSidebarLogic()
+  
+  // PDF Import State'leri
+  const [isUploading, setIsUploading] = React.useState(false)
+  const [candidates, setCandidates] = React.useState<CandidateEntry[]>([])
+  const [showModal, setShowModal] = React.useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/import/pdf', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to parse PDF')
+      
+      setCandidates(data.candidates || [])
+      setShowModal(true)
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setIsUploading(false)
+      // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const handleConfirmImport = async (selected: CandidateEntry[]) => {
+    try {
+      // Loop ile teker teker POST atarak DB'ye ekle
+      for (const cand of selected) {
+        await fetch('/api/entries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: cand.title,
+            type: cand.type,
+            content: cand.content,
+            tags: [],
+            versionNote: 'PDF import'
+          })
+        })
+      }
+      setShowModal(false)
+      setCandidates([])
+      window.location.reload() // Dashboard'u güncellemek için tazeleyici basit çözüm
+    } catch (err: any) {
+      alert('Error while saving: ' + err.message)
+    }
+  }
 
   return (
     <div style={{
@@ -125,7 +186,33 @@ export default function Sidebar({
         >
           {sidebarOpen && "New Entry"}
         </Button>
+
+        <Button
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          fullWidth={sidebarOpen}
+          style={{ height: sidebarOpen ? 42 : 44, padding: sidebarOpen ? undefined : 0 }}
+          icon={<FileUp size={18} />}
+        >
+          {sidebarOpen && (isUploading ? 'Loading...' : 'PDF Import')}
+        </Button>
+        <input 
+          type="file" 
+          accept="application/pdf" 
+          style={{ display: 'none' }} 
+          ref={fileInputRef} 
+          onChange={handleFileSelect} 
+        />
       </div>
+
+      {showModal && (
+        <ImportReviewModal 
+          candidates={candidates}
+          onConfirm={handleConfirmImport}
+          onClose={() => { setShowModal(false); setCandidates([]); }}
+        />
+      )}
     </div>
   )
 }

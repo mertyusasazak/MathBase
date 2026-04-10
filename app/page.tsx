@@ -9,7 +9,6 @@ import { DashboardView } from '@/components/features/dashboard/DashboardView'
 import { EntriesView } from '@/components/features/entries/EntriesView'
 import { DeletedItemsView } from '@/components/features/entries/DeletedItemsView'
 import { ReadingView } from '@/components/features/entries/ReadingView'
-import { Sparkles } from 'lucide-react'
 import { useAppController } from '@/hooks/useAppController'
 
 // Dynamic Imports
@@ -177,9 +176,9 @@ function MathBaseApp() {
               {state.activeView === 'entry' && state.selected && (
                 <ReadingView
                   selected={state.selected} entries={state.entries} sources={state.sources} relations={state.relations}
-                  showAI={state.showAI} setShowAI={actions.setShowAI} onEdit={() => actions.setMode('edit')}
+                  onEdit={() => actions.setMode('edit')}
                   onBack={() => window.history.back()} onSelectEntry={actions.selectEntry}
-                  sortedEntries={state.filtered} aiWidth={state.aiWidth} onStartResizingAI={actions.startResizingAI}
+                  sortedEntries={state.filtered}
                 />
               )}
 
