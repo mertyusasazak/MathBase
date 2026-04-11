@@ -52,7 +52,7 @@ const CollapsibleSection = ({
         cursor: 'pointer',
         transition: theme.animations.fast
       }}
-      onMouseEnter={e => e.currentTarget.style.background = '#ffffff05'}
+      onMouseEnter={e => e.currentTarget.style.background = theme.colors.surfaceHover}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -82,6 +82,19 @@ export default function EntryEditor(props: Props) {
   
   // Separation of Logic:
   const { state, refs, actions } = useEntryEditor(props)
+
+  // Dynamic Monaco Theme Binding
+  const [monacoTheme, setMonacoTheme] = React.useState('vs-dark')
+  React.useEffect(() => {
+    const updateTheme = () => {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light'
+      setMonacoTheme(isLight ? 'vs' : 'vs-dark')
+    }
+    updateTheme()
+    const observer = new MutationObserver(updateTheme)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <div style={{
@@ -160,7 +173,7 @@ export default function EntryEditor(props: Props) {
               defaultLanguage="markdown"
               value={state.content}
               onChange={v => actions.setContent(v || '')}
-              theme="vs-dark"
+              theme={monacoTheme}
               onMount={(editor) => {
                 refs.editorRef.current = editor
               }}
@@ -396,7 +409,7 @@ export default function EntryEditor(props: Props) {
                       borderRadius: '0 8px 8px 0',
                       marginLeft: -1 // overlap with tree line
                     }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#ffffff05'}
+                      onMouseEnter={e => e.currentTarget.style.background = theme.colors.surfaceHover}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       {/* Horizontal Connector Line */}

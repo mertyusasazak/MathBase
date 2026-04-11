@@ -5,21 +5,21 @@
 
 export const theme = {
   colors: {
-    background: '#0a0a0c', // Deeper base background
-    surface: '#16161a',    // Standard component background
-    surfaceHover: '#1e1e24',
-    surfaceActive: '#33333a',
-    border: '#2a2a33',
-    accent: '#c9a84c',     // MathBase Gold
-    accentMuted: '#c9a84c22',
-    accentDark: '#b8972f',
-    text: '#e8e6df',       // Main text
-    textMuted: '#7a7870',  // Metadata / secondary text
-    textDim: '#b8b5ae',    // In-between text
-    danger: '#c96b6b',
-    dangerMuted: '#c96b6b22',
-    success: '#7eb8b0',
-    successMuted: '#7eb8b022',
+    background: 'var(--bg)',
+    surface: 'var(--surface)',
+    surfaceHover: 'var(--surface-hover)',
+    surfaceActive: 'var(--surface-active)',
+    border: 'var(--border)',
+    accent: 'var(--accent)',
+    accentMuted: 'var(--accent-muted)',
+    accentDark: 'var(--accent-dark)',
+    text: 'var(--text)',
+    textMuted: 'var(--text-muted)',
+    textDim: 'var(--text-dim)',
+    danger: 'var(--danger)',
+    dangerMuted: 'var(--danger-muted)',
+    success: 'var(--success)',
+    successMuted: 'var(--success-muted)',
   },
   typography: {
     serif: 'EB Garamond, serif',

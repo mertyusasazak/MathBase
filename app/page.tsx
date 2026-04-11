@@ -4,12 +4,13 @@ import React, { Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import Sidebar from '@/components/layout/Sidebar'
 import { Button, Input } from '@/components/ui/Common'
+import { SunMedium, Moon, Palette } from 'lucide-react'
 import { theme } from '@/lib/core/theme'
 import { DashboardView } from '@/components/features/dashboard/DashboardView'
 import { EntriesView } from '@/components/features/entries/EntriesView'
 import { DeletedItemsView } from '@/components/features/entries/DeletedItemsView'
 import { ReadingView } from '@/components/features/entries/ReadingView'
-import { useAppController } from '@/hooks/useAppController'
+import { useAppController, THEME_COLORS, AccentColor } from '@/hooks/useAppController'
 
 // Dynamic Imports
 const GraphView = dynamic(() => import('@/components/features/graph/GraphView'), { ssr: false })
@@ -27,7 +28,7 @@ const globalCSS = `
   button { transition: all 0.15s; cursor: pointer; }
   button:hover { opacity: 0.85; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  .row-hover-group:hover { background: #1e1e24 !important; }
+  .row-hover-group:hover { background: ${theme.colors.surfaceHover} !important; }
   .katex-display { text-align: left !important; margin: 1em 0 !important; overflow-x: auto; overflow-y: hidden; }
   .katex-display > .katex { text-align: left !important; white-space: normal !important; }
   .monaco-editor { border-radius: 0 !important; }
@@ -35,9 +36,10 @@ const globalCSS = `
 
 function MathBaseApp() {
   const { state, refs, actions } = useAppController()
+  const [showColorPicker, setShowColorPicker] = React.useState(false)
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#0e0e10', color: '#e8e6df', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', background: theme.colors.background, color: theme.colors.text, overflow: 'hidden' }}>
       <Sidebar
         sidebarOpen={state.sidebarOpen}
         activeView={state.activeView}
@@ -55,70 +57,63 @@ function MathBaseApp() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
         {/* TOP BAR */}
         <div style={{ height: 64, borderBottom: `1px solid ${theme.colors.border}`, background: theme.colors.background, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, zIndex: 10 }}>
-          <div style={{ flex: 1, maxWidth: 800, display: 'flex', gap: 16, alignItems: 'center' }}>
+          <div style={{ maxWidth: 400, flex: 1, display: 'flex', gap: 16, alignItems: 'center' }}>
             <Input
               ref={refs.searchInputRef}
               value={state.search} onChange={e => actions.setSearch(e.target.value)}
               placeholder="Search in your knowledge repository..." fullWidth
               onFocus={() => state.activeView !== 'entries' && actions.goToView('entries')}
             />
-            
-            {/* SEARCH MODE TOGGLE (SLIDER) */}
-            <div
-              style={{
-                display: 'flex',
-                background: 'rgba(30, 30, 40, 0.5)',
-                backdropFilter: 'blur(8px)',
-                borderRadius: 999,
-                position: 'relative',
-                width: '230px',
-                height: 38,
-                cursor: 'pointer',
-                border: `1px solid rgba(255, 255, 255, 0.05)`,
-                boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.5)',
-                userSelect: 'none',
-                overflow: 'hidden',
-                transition: 'border-color 0.3s ease'
-              }}
-              onClick={() => actions.setSearchMode(state.searchMode === 'text' ? 'semantic' : 'text')}
-              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'}
-            >
-              {/* VARIABLE WIDTH PILL */}
-              <div style={{
-                position: 'absolute',
-                top: '4px',
-                bottom: '4px',
-                left: state.searchMode === 'text' ? '7px' : '90px',
-                width: state.searchMode === 'text' ? '70px' : '80px',
-                background: `linear-gradient(135deg, ${theme.colors.accent} 0%, #e8bc5e 100%)`,
-                borderRadius: 999,
-                transition: 'all 0.5s cubic-bezier(0.23, 1, 0.32, 1)',
-                boxShadow: `0 4px 15px ${theme.colors.accent}33`,
-                zIndex: 1
-              }} />
-              
-              <div style={{
-                flex: 1, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em',
-                color: state.searchMode === 'text' ? '#000' : 'rgba(255, 255, 255, 0.4)',
-                transition: 'color 0.4s ease',
-                pointerEvents: 'none',
-                mixBlendMode: state.searchMode === 'text' ? 'normal' : 'plus-lighter'
-              }}>
-                Text
-              </div>
-              <div style={{
-                flex: 1, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em',
-                color: state.searchMode === 'semantic' ? '#000' : 'rgba(255, 255, 255, 0.4)',
-                transition: 'color 0.4s ease',
-                pointerEvents: 'none',
-                mixBlendMode: state.searchMode === 'semantic' ? 'normal' : 'plus-lighter'
-              }}>
-                Semantic
-              </div>
+          </div>
+          <div style={{ flex: 1 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ position: 'relative' }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowColorPicker(!showColorPicker)}
+                style={{ width: 40, height: 40, padding: 0, borderRadius: '50%', color: theme.colors.accent }}
+                icon={<Palette size={20} />}
+              />
+              {showColorPicker && (
+                <>
+                  <div 
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }} 
+                    onClick={() => setShowColorPicker(false)} 
+                  />
+                  <div style={{
+                    position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 110,
+                    background: theme.colors.surface, border: `1px solid ${theme.colors.border}`,
+                    borderRadius: 12, padding: 12, display: 'flex', gap: 8, boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                    animation: 'fadeIn 0.2s ease-out'
+                  }}>
+                    {Object.entries(THEME_COLORS).map(([name, colors]) => (
+                      <button
+                        key={name}
+                        onClick={() => {
+                          actions.changeAccentColor(name as AccentColor)
+                          setShowColorPicker(false)
+                        }}
+                        style={{
+                          width: 24, height: 24, borderRadius: '50%', padding: 0, border: state.accentColor === name ? `2px solid ${theme.colors.text}` : 'none',
+                          background: state.themeMode === 'dark' ? colors.dark : colors.light,
+                          cursor: 'pointer', transition: 'transform 0.1s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={actions.toggleTheme}
+              style={{ width: 40, height: 40, padding: 0, borderRadius: '50%' }}
+              icon={state.themeMode === 'dark' ? <SunMedium size={20} /> : <Moon size={20} />}
+            />
           </div>
         </div>
 
@@ -194,7 +189,7 @@ function MathBaseApp() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div style={{ background: '#0e0e10', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.accent }}>Initializing MathBase...</div>}>
+    <Suspense fallback={<div style={{ background: theme.colors.background, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.accent }}>Initializing MathBase...</div>}>
       <style dangerouslySetInnerHTML={{ __html: globalCSS }} />
       <MathBaseApp />
     </Suspense>

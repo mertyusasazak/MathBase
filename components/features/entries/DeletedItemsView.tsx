@@ -93,7 +93,7 @@ export const DeletedItemsView: React.FC<DeletedItemsViewProps> = ({
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '40px 60px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ fontFamily: theme.typography.serif, fontSize: '2.2rem', color: '#c96b6b', fontWeight: 400, margin: 0, display: 'flex', alignItems: 'center' }}>
+        <h2 style={{ fontFamily: theme.typography.serif, fontSize: '2.2rem', color: theme.colors.danger, fontWeight: 400, margin: 0, display: 'flex', alignItems: 'center' }}>
           <Trash2 size={28} style={{ marginRight: 10 }} />
           Recently Deleted
         </h2>
@@ -155,7 +155,7 @@ export const DeletedItemsView: React.FC<DeletedItemsViewProps> = ({
                   const next = new Set(selectedIds); keys.forEach(k => next.add(k)); setSelectedIds(next);
                 }
               }}>
-                {paginated.length > 0 && paginated.every(i => selectedIds.has(getDeletedKey(i))) ? <CheckSquare size={18} color="#c96b6b" /> : <Square size={18} color={theme.colors.textMuted} />}
+                {paginated.length > 0 && paginated.every(i => selectedIds.has(getDeletedKey(i))) ? <CheckSquare size={18} color={theme.colors.danger} /> : <Square size={18} color={theme.colors.textMuted} />}
               </th>
               <th style={{ ...tableHeaderStyle, width: 110 }} onClick={() => onSort('Type')}>Type {renderSortIcon('Type')}</th>
               <th style={{ ...tableHeaderStyle, width: '40%' }} onClick={() => onSort('Title')}>Title {renderSortIcon('Title')}</th>
@@ -187,7 +187,7 @@ export const DeletedItemsView: React.FC<DeletedItemsViewProps> = ({
                     if (next.has(key)) next.delete(key); else next.add(key)
                     setSelectedIds(next)
                   }}>
-                    {selectedIds.has(key) ? <CheckSquare size={18} color="#c96b6b" /> : <Square size={18} color={theme.colors.textMuted} />}
+                    {selectedIds.has(key) ? <CheckSquare size={18} color={theme.colors.danger} /> : <Square size={18} color={theme.colors.textMuted} />}
                   </td>
                   <td style={{ padding: '12px 16px' }}><Badge variant="solid" color={typeColor}>{displayType}</Badge></td>
                   <td style={{ padding: '12px 16px', fontFamily: theme.typography.serif, fontSize: '1.05rem', opacity: 0.6 }} dangerouslySetInnerHTML={{ __html: renderTitle(e.title!) }} />

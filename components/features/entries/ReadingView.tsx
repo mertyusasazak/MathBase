@@ -88,7 +88,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
             fontWeight: 600,
             lineHeight: 1.2,
             margin: '0 0 24px',
-            color: '#e8e6df'
+            color: theme.colors.text
           }} dangerouslySetInnerHTML={{ __html: renderTitle(selected.title) }} />
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
@@ -98,8 +98,8 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                 fontSize: '0.72rem',
                 padding: '3px 9px',
                 borderRadius: 20,
-                border: '1px solid #2a2a33',
-                color: '#7a7870'
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.textMuted
               }}>#{t}</span>
             ))}
           </div>
@@ -111,7 +111,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                 fontSize: '0.65rem',
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
-                color: '#7a7870',
+                color: theme.colors.textMuted,
                 marginBottom: 6,
                 display: 'flex',
                 alignItems: 'center',
@@ -126,9 +126,9 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                     fontSize: '0.68rem',
                     padding: '2px 8px',
                     borderRadius: 4,
-                    background: '#7eb8b015',
-                    border: '1px solid #7eb8b033',
-                    color: '#7eb8b0'
+                    background: `${theme.colors.success}15`,
+                    border: `1px solid ${theme.colors.success}33`,
+                    color: theme.colors.success
                   }}>{k}</span>
                 ))}
                 {!state.expandKeywords && selected.symbolKeywords.length > 5 && (
@@ -199,8 +199,8 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
               style={{
                 marginBottom: 20,
                 padding: '12px 16px',
-                background: '#16161a',
-                border: '1px solid #2a2a33',
+                background: theme.colors.surface,
+                border: `1px solid ${theme.colors.border}`,
                 borderRadius: 8,
                 display: 'flex',
                 alignItems: 'center',
@@ -209,29 +209,29 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                 transition: 'all 0.2s ease-in-out'
               }}
             >
-              <BookOpen size={18} color="#c9a84c" />
+              <BookOpen size={18} color={theme.colors.accent} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.85rem', color: '#e8e6df', fontWeight: 600 }} dangerouslySetInnerHTML={{ __html: renderTitle(src.title) }} />
-                <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.75rem', color: '#7a7870', marginTop: 2 }}>
+                <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.85rem', color: theme.colors.text, fontWeight: 600 }} dangerouslySetInnerHTML={{ __html: renderTitle(src.title) }} />
+                <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.75rem', color: theme.colors.textMuted, marginTop: 2 }}>
                   {src.sourceType.toUpperCase()}{selected.pageRange ? ` · pp. ${selected.pageRange}` : ''}
                 </div>
               </div>
-              {src.filepath && <ArrowRight size={16} color="#c9a84c" opacity={0.6} />}
+              {src.filepath && <ArrowRight size={16} color={theme.colors.accent} opacity={0.6} />}
             </div>
           )}
 
-          <div style={{ borderTop: '1px solid #2a2a33', paddingTop: 22, marginBottom: 32 }}>
+          <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: 22, marginBottom: 32 }}>
             <MathRenderer content={selected.content} />
           </div>
-
+ 
           {state.sections.length > 0 && (
-            <div style={{ borderTop: '1px solid #2a2a33', paddingTop: 24 }}>
+            <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: 24 }}>
               <div style={{
                 fontFamily: 'Instrument Sans, sans-serif',
                 fontSize: '0.75rem',
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
-                color: '#7a7870',
+                color: theme.colors.textMuted,
                 marginBottom: 16,
                 display: 'flex',
                 alignItems: 'center',
@@ -242,19 +242,20 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
               <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 8, display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {state.sections.map(sec => (
                   <div key={sec.label}>
-                    <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.75rem', color: '#c9a84c', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{sec.label}</div>
+                    <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.75rem', color: theme.colors.accent, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{sec.label}</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
                       {sec.entries.map(({ entry: e }) => (
                         <button key={e.id} onClick={() => onSelectEntry(e)} style={{
                           padding: '8px 12px',
                           borderRadius: 8,
-                          border: '1px solid #2a2a33',
-                          background: '#16161a',
+                          border: `1px solid ${theme.colors.border}`,
+                          background: theme.colors.surface,
                           cursor: 'pointer',
                           textAlign: 'left',
                           display: 'flex',
-                          flexDirection: 'column',
-                          gap: 6,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 12,
                           transition: 'all 0.2s ease-in-out'
                         }}>
                           <span style={{
@@ -265,9 +266,9 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                             padding: '2px 6px',
                             background: `${TYPE_COLORS[e.type]}15`,
                             borderRadius: 4,
-                            alignSelf: 'flex-start'
+                            whiteSpace: 'nowrap'
                           }}>{e.type}</span>
-                          <span style={{ fontFamily: 'EB Garamond, serif', fontSize: '1.05rem', color: '#e8e6df', lineHeight: 1.2 }} dangerouslySetInnerHTML={{ __html: renderTitle(e.title) }} />
+                          <span style={{ fontFamily: 'EB Garamond, serif', fontSize: '1.05rem', color: theme.colors.text, lineHeight: 1.2, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dangerouslySetInnerHTML={{ __html: renderTitle(e.title) }} />
                         </button>
                       ))}
                     </div>

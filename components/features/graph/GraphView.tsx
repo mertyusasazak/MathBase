@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as d3 from 'd3'
 import { Entry, Relation } from '@/types'
+import { theme } from '@/lib/core/theme'
 
 
 interface Props {
@@ -107,7 +108,7 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
       .attr('refX', 20).attr('refY', 0)
       .attr('markerWidth', 6).attr('markerHeight', 6)
       .attr('orient', 'auto')
-      .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', '#3a3a44')
+      .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', theme.colors.textMuted)
 
     const g = svg.append('g')
 
@@ -140,7 +141,8 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
     // Links with relation-type coloring
     const link = g.append('g')
       .selectAll('line').data(links).join('line')
-      .attr('stroke', (d: any) => (RELATION_COLORS[d.relationType] || '#2a2a33') + '88')
+      .attr('stroke', (d: any) => RELATION_COLORS[d.relationType] || theme.colors.border)
+      .attr('stroke-opacity', 0.5)
       .attr('stroke-width', 1.5)
       .attr('marker-end', (d: any) => `url(#arrow-${d.relationType})`)
 
@@ -149,7 +151,8 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
       .selectAll('text').data(links).join('text')
       .text((d: any) => d.relationType.replace(/_/g, ' '))
       .attr('text-anchor', 'middle')
-      .attr('fill', (d: any) => (RELATION_COLORS[d.relationType] || '#5a5850') + 'cc')
+      .attr('fill', (d: any) => RELATION_COLORS[d.relationType] || theme.colors.textMuted)
+      .attr('fill-opacity', 0.8)
       .attr('font-size', '8px')
       .attr('font-family', 'Instrument Sans, sans-serif')
       .style('pointer-events', 'none')
@@ -185,7 +188,7 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
       .text((d: any) => d.title.length > 18 ? d.title.slice(0, 16) + '…' : d.title)
       .attr('text-anchor', 'middle')
       .attr('dy', (d: any) => 10 + d.refCount * 4 + 14)
-      .attr('fill', '#9a9890').attr('font-size', '10px')
+      .attr('fill', theme.colors.textDim).attr('font-size', '10px')
       .attr('font-family', 'Instrument Sans, sans-serif')
       .style('pointer-events', 'none')
 
@@ -267,23 +270,23 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
           position: 'absolute', bottom: 10, right: 10, zIndex: 10,
           fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.68rem',
           padding: '4px 10px', borderRadius: 5,
-          border: '1px solid #2a2a33', background: '#16161a',
-          color: '#7a7870', cursor: 'pointer',
+          border: `1px solid ${theme.colors.border}`, background: theme.colors.surface,
+          color: theme.colors.textMuted, cursor: 'pointer',
         }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = '#c9a84c')}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = '#2a2a33')}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = theme.colors.accent)}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = theme.colors.border)}
       >
         ↺ Reset
       </button>
 
       <div style={{
         position: 'absolute', bottom: 12, left: 12, zIndex: 10,
-        fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.65rem', color: '#7a7870'
+        fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.65rem', color: theme.colors.textMuted
       }}>
         Scroll to zoom · Drag to move
       </div>
 
-      <svg ref={svgRef} style={{ width: '100%', height: '100%', background: '#0e0e10' }} />
+      <svg ref={svgRef} style={{ width: '100%', height: '100%', background: theme.colors.background }} />
     </div>
   )
 }

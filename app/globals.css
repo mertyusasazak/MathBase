@@ -1,0 +1,47 @@
+:root {
+  /* Dark Mode (Default for MathBase) */
+  --bg: #0a0a0c;
+  --surface: #16161a;
+  --surface-hover: #1e1e24;
+  --surface-active: #33333a;
+  --border: #2a2a33;
+  --accent: #c9a84c;
+  --accent-muted: #c9a84c22;
+  --accent-dark: #b8972f;
+  --text: #e8e6df;
+  --text-muted: #7a7870;
+  --text-dim: #b8b5ae;
+  --danger: #c96b6b;
+  --danger-muted: #c96b6b22;
+  --success: #7eb8b0;
+  --success-muted: #7eb8b022;
+}
+
+[data-theme="light"] {
+  /* Light Mode Palette - Higher Contrast */
+  --bg: #fdfdfd;
+  --surface: #ffffff;
+  --surface-hover: #f0f0f2;
+  --surface-active: #e8e9eb;
+  --border: #d0d0d8;
+  --accent: #9a761e;
+  --accent-muted: #9a761e12;
+  --accent-dark: #7d5f18;
+  --text: #0a0a0c;
+  --text-muted: #44444a;
+  --text-dim: #222225;
+  --danger: #b33939;
+  --danger-muted: #b3393910;
+  --success: #2d6a62;
+  --success-muted: #2d6a6210;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+* {
+  transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}

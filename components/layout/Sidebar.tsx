@@ -28,6 +28,8 @@ import { CandidateEntry } from '@/types'
 import { FileUp } from 'lucide-react'
 import ImportReviewModal from '@/components/features/pdf/ImportReviewModal'
 
+import { SunMedium, Moon } from 'lucide-react'
+
 export default function Sidebar({
   sidebarOpen, activeView, goToView,
   deletedEntries,
@@ -41,6 +43,8 @@ export default function Sidebar({
   const [candidates, setCandidates] = React.useState<CandidateEntry[]>([])
   const [showModal, setShowModal] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -204,6 +208,8 @@ export default function Sidebar({
           ref={fileInputRef} 
           onChange={handleFileSelect} 
         />
+
+
       </div>
 
       {showModal && (

@@ -96,13 +96,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div style={{
           fontFamily: 'EB Garamond, serif',
           fontSize: '3.5rem',
-          color: '#c9a84c',
+          color: theme.colors.accent,
           marginBottom: 12
         }}>∂ MathBase</div>
         <div style={{
           fontFamily: 'Instrument Sans, sans-serif',
           fontSize: '0.85rem',
-          color: '#7a7870',
+          color: theme.colors.textMuted,
           letterSpacing: '0.08em'
         }}>Your personal mathematical knowledge repository</div>
       </div>
@@ -257,7 +257,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <input type="radio" value="merge" checked={importMode === 'merge'} onChange={e => setImportMode(e.target.value as any)} />
                 <span style={{ fontSize: '0.85rem' }}>Merge (Sadece yeni olanları ekler, eski veriler korunur)</span>
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e88787', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: theme.colors.danger, cursor: 'pointer' }}>
                 <input type="radio" value="replace" checked={importMode === 'replace'} onChange={e => setImportMode(e.target.value as any)} />
                 <span style={{ fontSize: '0.85rem' }}>Replace (CİDDİ UYARI: Mevcut tüm DB silinir, sadece dosyadan yüklenir)</span>
               </label>

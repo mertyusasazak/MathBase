@@ -1,5 +1,5 @@
-// app/layout.tsx
 import type { Metadata } from 'next'
+import './globals.css'
 
 export const metadata: Metadata = {
   title: 'MathBase – Mathematical Knowledge Repository',
@@ -16,6 +16,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              try {
+                var theme = localStorage.getItem('theme');
+                if (theme) {
+                  document.documentElement.setAttribute('data-theme', theme);
+                }
+              } catch (e) {}
+            })();
+          `
+        }} />
       </head>
       <body>{children}</body>
     </html>

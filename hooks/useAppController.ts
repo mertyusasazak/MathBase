@@ -5,6 +5,17 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useMathBase } from '@/hooks/useMathBase'
 import { Entry } from '@/types'
 
+export const THEME_COLORS = {
+  gold: { dark: '#c9a84c', light: '#866619' }, // Darker gold for light mode
+  indigo: { dark: '#818cf8', light: '#3730a3' }, // Darker indigo
+  emerald: { dark: '#34d399', light: '#065f46' }, // Darker emerald
+  rose: { dark: '#fb7185', light: '#9f1239' }, // Darker rose
+  cyan: { dark: '#22d3ee', light: '#155e75' }, // Darker cyan
+  violet: { dark: '#a78bfa', light: '#5b21b6' } // Darker violet
+}
+
+export type AccentColor = keyof typeof THEME_COLORS
+
 export function useAppController() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -22,7 +33,8 @@ export function useAppController() {
   const [mode, setMode] = useState<'view' | 'edit' | 'new'>('view')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [search, setSearch] = useState('')
-  const [searchMode, setSearchMode] = useState<'text' | 'semantic'>('text')
+  const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark')
+  const [accentColor, setAccentColor] = useState<AccentColor>('gold')
 
   const [editorKey, setEditorKey] = useState(0)
 
@@ -40,6 +52,39 @@ export function useAppController() {
 
   const searchInputRef = useRef<HTMLInputElement>(null)
 
+  // Theme Sync
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null
+    if (savedTheme) {
+      setThemeMode(savedTheme)
+      document.documentElement.setAttribute('data-theme', savedTheme)
+    }
+    const savedColor = localStorage.getItem('accentColor') as AccentColor | null
+    if (savedColor && THEME_COLORS[savedColor]) {
+      setAccentColor(savedColor)
+    }
+  }, [])
+
+  useEffect(() => {
+    const colors = THEME_COLORS[accentColor]
+    const hex = themeMode === 'dark' ? colors.dark : colors.light
+    document.documentElement.style.setProperty('--accent', hex)
+    document.documentElement.style.setProperty('--accent-muted', `${hex}22`)
+    document.documentElement.style.setProperty('--accent-dark', hex) // Simplified fallback
+  }, [themeMode, accentColor])
+
+  const toggleTheme = useCallback(() => {
+    const newTheme = themeMode === 'dark' ? 'light' : 'dark'
+    setThemeMode(newTheme)
+    localStorage.setItem('theme', newTheme)
+    document.documentElement.setAttribute('data-theme', newTheme)
+  }, [themeMode])
+
+  const changeAccentColor = useCallback((color: AccentColor) => {
+    setAccentColor(color)
+    localStorage.setItem('accentColor', color)
+  }, [])
+
   // URL Sync
   useEffect(() => {
     const viewParam = searchParams.get('view') as any
@@ -53,22 +98,15 @@ export function useAppController() {
       }
     } else if (viewParam) { 
       setActiveView(viewParam)
+      setSelected(null)
       setMode('view') 
+    } else {
+      setSelected(null)
+      setMode('view')
     }
   }, [searchParams, entries])
 
-  // Debounced Search Logic
-  useEffect(() => {
-    if (!search.trim()) { 
-      // loadEntries(); 
-      return 
-    }
-    const t = setTimeout(async () => {
-      // Logic for search placeholder - in a real app, this updates the entry list
-      // await fetch(`/api/search?q=${encodeURIComponent(search)}&mode=${searchMode}`)
-    }, 300)
-    return () => clearTimeout(t)
-  }, [search, searchMode])
+
 
   const goToUrl = useCallback((params: Record<string, string | null>) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()))
@@ -80,7 +118,7 @@ export function useAppController() {
   }, [searchParams, router, pathname])
 
   const goToView = (view: any) => { goToUrl({ view, entry: null }) }
-  const selectEntry = (e: Entry) => { goToUrl({ entry: e.id.toString(), view: null }) }
+  const selectEntry = (e: Entry) => { goToUrl({ entry: e.id.toString() }) }
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' | null = 'asc'
@@ -148,6 +186,18 @@ export function useAppController() {
 
   // Filtering processed data
   const filtered = entries.filter(e => {
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      const match = 
+        e.title.toLowerCase().includes(q) ||
+        e.content.toLowerCase().includes(q) ||
+        e.tags.some(t => t.toLowerCase().includes(q)) ||
+        e.type.toLowerCase().includes(q) ||
+        e.symbolKeywords?.some(k => k.toLowerCase().includes(q))
+      
+      if (!match) return false
+    }
+
     if (activeTags.size > 0 && !e.tags.some(t => activeTags.has(t))) return false
     if (activeTypes.size > 0 && !activeTypes.has(e.type)) return false
     if (activeTitles.size > 0 && !activeTitles.has(e.title)) return false
@@ -165,13 +215,13 @@ export function useAppController() {
   return {
     state: {
       entries, sources, relations, deletedItems, loading,
-      activeView, selected, mode, sidebarOpen, search, searchMode, editorKey,
+      activeView, selected, mode, sidebarOpen, search, editorKey, themeMode, accentColor,
       activeTags, activeTypes, activeTitles, showFilterDropdown, itemsPerPage, currentPage, deletedPage,
       selectedEntryIds, selectedDeletedIds, sortConfig, filtered
     },
     refs: { searchInputRef },
     actions: {
-      setActiveView, setSelected, setMode, setSidebarOpen, setSearch, setSearchMode, setEditorKey,
+      setActiveView, setSelected, setMode, setSidebarOpen, setSearch, setEditorKey, toggleTheme, changeAccentColor,
       setActiveTags, setActiveTypes, setActiveTitles, setShowFilterDropdown, setItemsPerPage, setCurrentPage, setDeletedPage,
       setSelectedEntryIds, setSelectedDeletedIds, 
       goToView, selectEntry, handleSort, handleSave, handleBulkDelete, handleBulkRestoreDeleted, 
