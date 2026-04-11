@@ -59,7 +59,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Import failed')
-      
+
       alert(`Import completed!\nImported: ${data.imported}\nSkipped: ${data.skipped}\n${data.errors?.length ? `Errors: ${data.errors.length}` : ''}`)
       window.location.reload() // Dashboard'u tazelemek için
     } catch (err: any) {
@@ -121,25 +121,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       `}</style>
 
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center' }}>
-        {stats.map(stat => (
-          <Card key={stat.label} style={{ textAlign: 'center', padding: '24px 32px', minWidth: 140 }}>
-            <div style={{
-              fontFamily: theme.typography.serif,
-              fontSize: '2.5rem',
-              color: theme.colors.accent,
-              lineHeight: 1
-            }}>{stat.value}</div>
-            <div style={{
-              fontFamily: theme.typography.sans,
-              fontSize: '0.75rem',
-              color: theme.colors.textMuted,
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              marginTop: 10,
-              fontWeight: 700
-            }}>{stat.label}</div>
-          </Card>
-        ))}
+        {stats.map(stat => {
+          const typeKey = stat.label.toLowerCase().includes('source') ? 'source' : 
+                         stat.label.toLowerCase().includes('theorem') ? 'theorem' :
+                         stat.label.toLowerCase().includes('definition') ? 'definition' : 'accent';
+          const baseColor = typeKey === 'accent' ? theme.colors.accent : (TYPE_COLORS as any)[typeKey];
+          
+          return (
+            <Card 
+              key={stat.label} 
+              style={{ 
+                textAlign: 'center', 
+                padding: '24px 32px', 
+                minWidth: 140,
+                background: `${baseColor}08`, // Very subtle tint
+                border: `1px solid ${baseColor}33`, // Themed border
+              }}
+            >
+              <div style={{
+                fontFamily: theme.typography.serif,
+                fontSize: '2.5rem',
+                color: baseColor,
+                lineHeight: 1
+              }}>{stat.value}</div>
+              <div style={{
+                fontFamily: theme.typography.sans,
+                fontSize: '0.75rem',
+                color: theme.colors.textMuted,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                marginTop: 10,
+                fontWeight: 700
+              }}>{stat.label}</div>
+            </Card>
+          );
+        })}
       </div>
 
       {entries.length > 0 ? (
@@ -207,7 +223,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           marginBottom: 16,
           fontWeight: 700
         }}>Backup & Restore</div>
-        
+
         <div style={{ display: 'flex', gap: 16 }}>
           <Button variant="outline" onClick={() => window.open('/api/export/json', '_self')}>
             JSON Download
@@ -216,12 +232,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
             JSON Upload
           </Button>
-          <input 
-            type="file" 
-            accept="application/json" 
-            style={{ display: 'none' }} 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
+          <input
+            type="file"
+            accept="application/json"
+            style={{ display: 'none' }}
+            ref={fileInputRef}
+            onChange={handleFileChange}
           />
         </div>
       </div>

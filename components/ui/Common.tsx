@@ -20,7 +20,7 @@ export function Badge({
   const getVariantStyles = (): React.CSSProperties => {
     switch (variant) {
       case 'solid':
-        return { background: color, color: theme.colors.background, border: `1px solid ${color}` }
+        return { background: `${color}15`, color: color, border: `1px solid ${color}44` }
       case 'outline':
         return { background: 'transparent', color: color, border: `1px solid ${color}` }
       case 'muted':
@@ -96,18 +96,18 @@ export function Button({
         return {
           border: `1px solid ${theme.colors.accent}`,
           background: isHovered ? theme.colors.accentDark : theme.colors.accent,
-          color: theme.colors.background,
+          color: theme.colors.onAccent,
         }
       case 'danger':
         return {
           border: `1px solid ${theme.colors.danger}`,
-          color: isHovered ? '#fff' : theme.colors.danger,
+          color: isHovered ? theme.colors.onAccent : theme.colors.danger,
           background: isHovered ? theme.colors.danger : 'transparent',
         }
       case 'success':
         return {
           border: `1px solid ${theme.colors.success}`,
-          color: isHovered ? '#fff' : theme.colors.success,
+          color: isHovered ? theme.colors.onAccent : theme.colors.success,
           background: isHovered ? theme.colors.success : 'transparent',
         }
       case 'ghost':
@@ -155,17 +155,11 @@ export function Button({
 
   const renderIcon = () => {
     if (!icon) return null
-    let glowColor = theme.colors.accent
-    if (variant === 'danger') glowColor = theme.colors.danger
-    if (variant === 'success') glowColor = theme.colors.success
-
     return (
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'filter 0.2s ease-in-out',
-        filter: (shouldGlow || (isHovered && ['danger', 'success'].includes(variant))) ? `drop-shadow(0 0 8px ${glowColor})` : 'none'
+        justifyContent: 'center'
       }}>
         {icon}
       </div>

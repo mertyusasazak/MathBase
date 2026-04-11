@@ -6,12 +6,12 @@ import { useMathBase } from '@/hooks/useMathBase'
 import { Entry } from '@/types'
 
 export const THEME_COLORS = {
-  gold: { dark: '#c9a84c', light: '#866619' }, // Darker gold for light mode
-  indigo: { dark: '#818cf8', light: '#3730a3' }, // Darker indigo
-  emerald: { dark: '#34d399', light: '#065f46' }, // Darker emerald
-  rose: { dark: '#fb7185', light: '#9f1239' }, // Darker rose
-  cyan: { dark: '#22d3ee', light: '#155e75' }, // Darker cyan
-  violet: { dark: '#a78bfa', light: '#5b21b6' } // Darker violet
+  gold: { dark: '#c9a84c', light: '#725712' },
+  indigo: { dark: '#818cf8', light: '#1e1b4b' },
+  emerald: { dark: '#34d399', light: '#064e3b' },
+  rose: { dark: '#fb7185', light: '#881337' },
+  cyan: { dark: '#22d3ee', light: '#164e63' },
+  violet: { dark: '#a78bfa', light: '#4c1d95' }
 }
 
 export type AccentColor = keyof typeof THEME_COLORS
@@ -20,7 +20,7 @@ export function useAppController() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  
+
   const {
     entries, sources, relations, deletedItems, loading,
     handleDelete, handleRestore, handlePermanentDelete, refreshAll, loadEntries, loadSources, loadRelations, loadDeleted
@@ -91,18 +91,17 @@ export function useAppController() {
     const entryParam = searchParams.get('entry')
     if (entryParam && entries.length > 0) {
       const entry = entries.find(e => e.id === parseInt(entryParam))
-      if (entry) { 
+      if (entry) {
         setSelected(entry)
-        setActiveView('entry')
-        setMode('view') 
+        setMode('view')
       }
-    } else if (viewParam) { 
-      setActiveView(viewParam)
-      setSelected(null)
-      setMode('view') 
     } else {
       setSelected(null)
       setMode('view')
+    }
+
+    if (viewParam) {
+      setActiveView(viewParam)
     }
   }, [searchParams, entries])
 
@@ -110,9 +109,9 @@ export function useAppController() {
 
   const goToUrl = useCallback((params: Record<string, string | null>) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()))
-    Object.entries(params).forEach(([key, value]) => { 
+    Object.entries(params).forEach(([key, value]) => {
       if (value === null) current.delete(key)
-      else current.set(key, value) 
+      else current.set(key, value)
     })
     router.push(`${pathname}?${current.toString()}`)
   }, [searchParams, router, pathname])
@@ -143,10 +142,10 @@ export function useAppController() {
   const handleBulkDelete = async () => {
     if (selectedEntryIds.size === 0) return
     if (!confirm(`Trash ${selectedEntryIds.size} entries?`)) return
-    await fetch('/api/entries/bulk', { 
-      method: 'DELETE', 
-      headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify({ ids: Array.from(selectedEntryIds) }) 
+    await fetch('/api/entries/bulk', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(selectedEntryIds) })
     })
     setSelectedEntryIds(new Set())
     await refreshAll()
@@ -188,13 +187,13 @@ export function useAppController() {
   const filtered = entries.filter(e => {
     if (search.trim()) {
       const q = search.toLowerCase()
-      const match = 
+      const match =
         e.title.toLowerCase().includes(q) ||
         e.content.toLowerCase().includes(q) ||
         e.tags.some(t => t.toLowerCase().includes(q)) ||
         e.type.toLowerCase().includes(q) ||
         e.symbolKeywords?.some(k => k.toLowerCase().includes(q))
-      
+
       if (!match) return false
     }
 
@@ -223,8 +222,8 @@ export function useAppController() {
     actions: {
       setActiveView, setSelected, setMode, setSidebarOpen, setSearch, setEditorKey, toggleTheme, changeAccentColor,
       setActiveTags, setActiveTypes, setActiveTitles, setShowFilterDropdown, setItemsPerPage, setCurrentPage, setDeletedPage,
-      setSelectedEntryIds, setSelectedDeletedIds, 
-      goToView, selectEntry, handleSort, handleSave, handleBulkDelete, handleBulkRestoreDeleted, 
+      setSelectedEntryIds, setSelectedDeletedIds,
+      goToView, selectEntry, handleSort, handleSave, handleBulkDelete, handleBulkRestoreDeleted,
       handleBulkPermanentDelete, handleDeleteAllPermanently, refreshAll, handleDelete, handleRestore, handlePermanentDelete
     }
   }

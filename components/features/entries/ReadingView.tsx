@@ -126,8 +126,8 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                     fontSize: '0.68rem',
                     padding: '2px 8px',
                     borderRadius: 4,
-                    background: `${theme.colors.success}15`,
-                    border: `1px solid ${theme.colors.success}33`,
+                    background: theme.colors.successMuted,
+                    border: `1px solid ${theme.colors.success}44`,
                     color: theme.colors.success
                   }}>{k}</span>
                 ))}
@@ -196,17 +196,17 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
           {src && (
             <div
               onClick={() => src.filepath && window.open(src.filepath, '_blank')}
+              className={src.filepath ? "glow-card" : ""}
               style={{
                 marginBottom: 20,
                 padding: '12px 16px',
-                background: theme.colors.surface,
-                border: `1px solid ${theme.colors.border}`,
+                background: theme.colors.sourceMuted,
+                border: `1px solid ${theme.colors.source}44`,
                 borderRadius: 8,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
-                cursor: src.filepath ? 'pointer' : 'default',
-                transition: 'all 0.2s ease-in-out'
+                cursor: src.filepath ? 'pointer' : 'default'
               }}
             >
               <BookOpen size={18} color={theme.colors.accent} />
@@ -245,7 +245,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                     <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.75rem', color: theme.colors.accent, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{sec.label}</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
                       {sec.entries.map(({ entry: e }) => (
-                        <button key={e.id} onClick={() => onSelectEntry(e)} style={{
+                        <button key={e.id} onClick={() => onSelectEntry(e)} className="glow-card" style={{
                           padding: '8px 12px',
                           borderRadius: 8,
                           border: `1px solid ${theme.colors.border}`,
@@ -255,8 +255,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                           display: 'flex',
                           flexDirection: 'row',
                           alignItems: 'center',
-                          gap: 12,
-                          transition: 'all 0.2s ease-in-out'
+                          gap: 12
                         }}>
                           <span style={{
                             color: TYPE_COLORS[e.type],

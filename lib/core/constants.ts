@@ -4,7 +4,8 @@ export const TYPE_COLORS: Record<string, string> = {
   lemma: '#8fcc8f',
   corollary: '#cc6ba8',
   example: '#cc9f6b',
-  remark: '#a06bcc'
+  remark: '#a06bcc',
+  source: 'var(--source)'
 }
 
 export const ENTRY_TYPES = ['definition', 'theorem', 'lemma', 'corollary', 'example', 'remark']

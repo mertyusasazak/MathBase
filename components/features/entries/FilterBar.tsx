@@ -45,11 +45,11 @@ export default function FilterBar({
   const totalActive = columns.reduce((acc, col) => acc + col.activeValues.size, 0)
 
   return (
-    <Card 
+    <Card
       variant="outline"
       padding={0}
-      style={{ 
-        marginBottom: 16, 
+      style={{
+        marginBottom: 16,
         animation: `slideDown ${theme.animations.normal}`,
       }}
     >
@@ -59,20 +59,20 @@ export default function FilterBar({
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-      
+
       {/* Column Headers Row */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        padding: '12px 20px', 
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '12px 20px',
         borderBottom: activeColumnId ? `1px solid ${theme.colors.border}` : 'none',
         gap: 8,
         flexWrap: 'wrap'
       }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 8, 
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
           marginRight: 16,
           color: theme.colors.accent,
           fontSize: '0.75rem',
@@ -100,16 +100,16 @@ export default function FilterBar({
           >
             {col.label}
             {col.activeValues.size > 0 && (
-              <span style={{ 
-                background: theme.colors.accent, 
-                color: theme.colors.background, 
-                borderRadius: '50%', 
-                width: 16, 
-                height: 16, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                fontSize: '0.65rem', 
+              <span style={{
+                background: theme.colors.accent,
+                color: theme.colors.background,
+                borderRadius: '50%',
+                width: 16,
+                height: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.65rem',
                 fontWeight: 800,
                 marginLeft: 4
               }}>
@@ -134,7 +134,7 @@ export default function FilterBar({
       {activeColumn && (
         <div style={{ padding: '20px', background: `${theme.colors.surfaceHover}55` }}>
           <div style={{ marginBottom: 16 }}>
-            <Input 
+            <Input
               autoFocus
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -143,11 +143,11 @@ export default function FilterBar({
             />
           </div>
 
-          <div style={{ 
-            display: 'flex', 
+          <div style={{
+            display: 'flex',
             flexDirection: 'column',
-            gap: 4, 
-            maxHeight: 250, 
+            gap: 4,
+            maxHeight: 250,
             overflowY: 'auto',
             paddingRight: 8
           }}>
@@ -193,15 +193,15 @@ export default function FilterBar({
                       }
                     }}
                   >
-                    <div style={{ 
+                    <div style={{
                       flexShrink: 0,
-                      width: 18, 
-                      height: 18, 
-                      border: `1.5px solid ${isSelected ? theme.colors.accent : theme.colors.border}`, 
-                      borderRadius: 4, 
+                      width: 18,
+                      height: 18,
+                      border: `1.5px solid ${isSelected ? theme.colors.accent : theme.colors.border}`,
+                      borderRadius: 4,
                       background: isSelected ? theme.colors.accent : 'transparent',
-                      display: 'flex', 
-                      alignItems: 'center', 
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       transition: theme.animations.fast
                     }}>

@@ -25,7 +25,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ content, style }) =>
         fontFamily: theme.typography.serif,
         fontSize: '1.05rem',
         lineHeight: 1.78,
-        color: '#ccc8c0',
+        color: theme.colors.text,
         ...style
       }}
     />

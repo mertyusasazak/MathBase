@@ -6,6 +6,7 @@ import Pagination from '@/components/ui/Pagination'
 import { Button, Input, Select } from '@/components/ui/Common'
 import { theme } from '@/lib/core/theme'
 import { Source } from '@/types'
+import { TYPE_COLORS } from '@/lib/core/constants'
 
 interface Props {
     sources: Source[]
@@ -179,9 +180,10 @@ export default function SourcesView({ sources, onReload }: Props) {
                                         padding: '4px 10px', 
                                         borderRadius: 4, 
                                         textTransform: 'uppercase', 
-                                        background: `${theme.colors.accent}15`, 
-                                        color: theme.colors.accent,
-                                        letterSpacing: '0.05em'
+                                        background: theme.colors.sourceMuted, 
+                                        color: theme.colors.source,
+                                        letterSpacing: '0.05em',
+                                        border: `1px solid ${theme.colors.source}33`
                                     }}>{s.sourceType}</span>
                                 </td>
                                 <td style={{ padding: '12px 16px', fontFamily: theme.typography.serif, fontSize: '1.1rem', color: theme.colors.text }}>{s.title}</td>

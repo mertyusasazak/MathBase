@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { 
+import {
   Square, CheckSquare, Pencil, Trash2, ArrowUp, ArrowDown, Filter, Library
 } from 'lucide-react'
 import { Button, Badge, Select } from '@/components/ui/Common'
@@ -75,13 +75,13 @@ export const EntriesView: React.FC<EntriesViewProps> = ({
     return sortConfig.direction === 'asc' ? <ArrowUp size={12} style={{ marginLeft: 4, display: 'inline' }} /> : <ArrowDown size={12} style={{ marginLeft: 4, display: 'inline' }} />
   }
 
-  const tableHeaderStyle: React.CSSProperties = { 
-    padding: '16px', 
-    fontFamily: theme.typography.sans, 
-    fontSize: '0.72rem', 
-    textTransform: 'uppercase', 
-    letterSpacing: '0.12em', 
-    color: theme.colors.textMuted, 
+  const tableHeaderStyle: React.CSSProperties = {
+    padding: '16px',
+    fontFamily: theme.typography.sans,
+    fontSize: '0.72rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+    color: theme.colors.textMuted,
     fontWeight: 700,
     cursor: 'pointer',
     userSelect: 'none',
@@ -174,15 +174,15 @@ export const EntriesView: React.FC<EntriesViewProps> = ({
             ) : paginated.length === 0 ? (
               <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center' }}>No records found.</td></tr>
             ) : paginated.map(e => (
-              <tr 
-                key={e.id} 
-                onClick={() => onSelectEntry(e)} 
+              <tr
+                key={e.id}
+                onClick={() => onSelectEntry(e)}
                 className="row-hover-group"
-                style={{ 
-                  borderBottom: `1px solid ${theme.colors.border}`, 
-                  cursor: 'pointer', 
+                style={{
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                  cursor: 'pointer',
                   transition: theme.animations.fast,
-                  background: selectedIds.has(e.id) ? `${theme.colors.accent}08` : 'transparent' 
+                  background: selectedIds.has(e.id) ? `${theme.colors.accent}08` : 'transparent'
                 }}
               >
                 <td style={{ padding: '12px 16px' }} onClick={ev => {
@@ -195,9 +195,9 @@ export const EntriesView: React.FC<EntriesViewProps> = ({
                 </td>
                 <td style={{ padding: '12px 16px' }}><Badge variant="solid" color={TYPE_COLORS[e.type]}>{e.type}</Badge></td>
                 <td style={{ padding: '12px 16px', fontFamily: theme.typography.serif, fontSize: '1.05rem', color: theme.colors.text }}>
-                  <div dangerouslySetInnerHTML={{ __html: renderTitle(e.title) }} style={{ 
-                    whiteSpace: 'nowrap', 
-                    overflow: 'hidden', 
+                  <div dangerouslySetInnerHTML={{ __html: renderTitle(e.title) }} style={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     maxWidth: '100%'
                   }} />
@@ -206,11 +206,11 @@ export const EntriesView: React.FC<EntriesViewProps> = ({
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                     {e.tags.slice(0, 2).map(t => <Badge key={t}>{t}</Badge>)}
                     {e.tags.length > 2 && (
-                      <span 
+                      <span
                         title={e.tags.slice(2).join(', ')}
-                        style={{ 
-                          fontFamily: theme.typography.sans, 
-                          fontSize: '0.65rem', 
+                        style={{
+                          fontFamily: theme.typography.sans,
+                          fontSize: '0.65rem',
                           color: theme.colors.textMuted,
                           alignSelf: 'center',
                           padding: '2px 4px'
@@ -222,9 +222,9 @@ export const EntriesView: React.FC<EntriesViewProps> = ({
                   </div>
                 </td>
                 <td style={{ padding: '12px 16px' }}>
-                  <div style={{ 
-                    fontSize: '0.75rem', 
-                    color: theme.colors.textDim, 
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: theme.colors.textDim,
                     fontStyle: 'italic',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',

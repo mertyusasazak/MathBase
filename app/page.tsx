@@ -32,6 +32,12 @@ const globalCSS = `
   .katex-display { text-align: left !important; margin: 1em 0 !important; overflow-x: auto; overflow-y: hidden; }
   .katex-display > .katex { text-align: left !important; white-space: normal !important; }
   .monaco-editor { border-radius: 0 !important; }
+  .glow-card { transition: all ${theme.animations.fast} !important; }
+  .glow-card:hover { 
+    border-color: ${theme.colors.accent} !important; 
+    box-shadow: 0 4px 12px ${theme.colors.accent}22; 
+    transform: translateY(-2px);
+  }
 `
 
 function MathBaseApp() {
@@ -56,7 +62,7 @@ function MathBaseApp() {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
         {/* TOP BAR */}
-        <div style={{ height: 64, borderBottom: `1px solid ${theme.colors.border}`, background: theme.colors.background, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, zIndex: 10 }}>
+        <div style={{ height: 64, borderBottom: `1px solid ${theme.colors.border}`, background: theme.colors.background, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, zIndex: 100 }}>
           <div style={{ maxWidth: 400, flex: 1, display: 'flex', gap: 16, alignItems: 'center' }}>
             <Input
               ref={refs.searchInputRef}
@@ -132,6 +138,14 @@ function MathBaseApp() {
                 state.selected ? actions.selectEntry(state.selected) : actions.goToView('dashboard') 
               }}
             />
+          ) : (state.selected && state.mode === 'view') ? (
+            <ReadingView
+              selected={state.selected} entries={state.entries} sources={state.sources} relations={state.relations}
+              onEdit={() => actions.setMode('edit')}
+              onBack={() => window.history.back()} 
+              onSelectEntry={actions.selectEntry}
+              sortedEntries={state.filtered}
+            />
           ) : (
             <>
               {state.activeView === 'dashboard' && <DashboardView entries={state.entries} sources={state.sources} onSelectEntry={actions.selectEntry} onCreateEntry={() => actions.setMode('new')} />}
@@ -165,15 +179,6 @@ function MathBaseApp() {
                   activeTags={state.activeTags} setActiveTags={actions.setActiveTags}
                   activeTypes={state.activeTypes} setActiveTypes={actions.setActiveTypes}
                   activeTitles={state.activeTitles} setActiveTitles={actions.setActiveTitles}
-                />
-              )}
-
-              {state.activeView === 'entry' && state.selected && (
-                <ReadingView
-                  selected={state.selected} entries={state.entries} sources={state.sources} relations={state.relations}
-                  onEdit={() => actions.setMode('edit')}
-                  onBack={() => window.history.back()} onSelectEntry={actions.selectEntry}
-                  sortedEntries={state.filtered}
                 />
               )}
 

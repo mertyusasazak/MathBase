@@ -13,6 +13,7 @@ export const theme = {
     accent: 'var(--accent)',
     accentMuted: 'var(--accent-muted)',
     accentDark: 'var(--accent-dark)',
+    onAccent: 'var(--on-accent)',
     text: 'var(--text)',
     textMuted: 'var(--text-muted)',
     textDim: 'var(--text-dim)',
@@ -20,6 +21,8 @@ export const theme = {
     dangerMuted: 'var(--danger-muted)',
     success: 'var(--success)',
     successMuted: 'var(--success-muted)',
+    source: 'var(--source)',
+    sourceMuted: 'var(--source-muted)',
   },
   typography: {
     serif: 'EB Garamond, serif',

@@ -167,7 +167,7 @@ export default function Sidebar({
           </div>
         )}
         <NavButton active={activeView === 'dashboard'} onClick={() => goToView('dashboard')} icon={<LayoutDashboard size={18} />} label="Dashboard" sidebarOpen={sidebarOpen} />
-        <NavButton active={activeView === 'entries'} onClick={() => goToView('entries')} icon={<Library size={18} />} label="All Entries" sidebarOpen={sidebarOpen} />
+        <NavButton active={activeView === 'entries'} onClick={() => goToView('entries')} icon={<Library size={18} />} label="Entries" sidebarOpen={sidebarOpen} />
         <NavButton active={activeView === 'graph'} onClick={() => goToView('graph')} icon={<Network size={18} />} label="Graph View" sidebarOpen={sidebarOpen} />
         <NavButton active={activeView === 'sources'} onClick={() => goToView('sources')} icon={<BookOpen size={18} />} label="Sources" sidebarOpen={sidebarOpen} />
         <NavButton active={activeView === 'deleted'} onClick={() => goToView('deleted')} icon={<Trash2 size={18} />} label="Trash" sidebarOpen={sidebarOpen} count={deletedEntries.length} isRed />
@@ -269,9 +269,7 @@ function NavButton({ active, onClick, icon, label, sidebarOpen, count, isRed }: 
       <div style={{ 
         display: 'flex', 
         alignItems: 'center', 
-        justifyContent: 'center',
-        transition: 'filter 0.3s ease-in-out',
-        filter: (active || hover) ? `drop-shadow(0 0 8px ${isRed ? theme.colors.danger : theme.colors.accent})` : 'none'
+        justifyContent: 'center'
       }}>
         {icon}
       </div>
@@ -282,10 +280,12 @@ function NavButton({ active, onClick, icon, label, sidebarOpen, count, isRed }: 
           {count !== undefined && count > 0 && (
             <span style={{
               fontSize: '0.75rem',
-              background: isRed ? `${theme.colors.danger}22` : theme.colors.surface,
-              color: isRed ? theme.colors.danger : theme.colors.textMuted,
-              padding: '2px 6px',
-              borderRadius: 4
+              background: isRed ? `${theme.colors.danger}12` : `${theme.colors.accent}08`,
+              color: isRed ? theme.colors.danger : theme.colors.accent,
+              padding: '2px 8px',
+              borderRadius: 4,
+              border: `1px solid ${isRed ? theme.colors.danger : theme.colors.accent}33`,
+              fontWeight: 700
             }}>
               {count}
             </span>
