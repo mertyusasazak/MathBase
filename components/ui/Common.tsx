@@ -53,7 +53,7 @@ export function Badge({
 
 /* ──── BUTTON ──── */
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'gold' | 'gold-solid' | 'outline' | 'danger' | 'success' | 'ghost'
+  variant?: 'gold' | 'gold-solid' | 'outline' | 'danger' | 'success' | 'ghost' | 'ghost-outline'
   size?: 'sm' | 'md' | 'lg'
   icon?: React.ReactNode
   iconPosition?: 'left' | 'right'
@@ -122,6 +122,12 @@ export function Button({
           border: `1px solid ${isHovered ? theme.colors.accent : theme.colors.border}`,
           color: isHovered ? theme.colors.accent : theme.colors.textDim,
           background: isHovered ? theme.colors.accentMuted : 'transparent',
+        }
+      case 'ghost-outline':
+        return {
+          border: `1px solid ${isHovered ? 'currentColor' : 'transparent'}`,
+          color: isHovered ? (style?.color || theme.colors.accent) : (style?.color || theme.colors.textMuted),
+          background: isHovered ? `${style?.color || theme.colors.accent}12` : 'transparent',
         }
     }
   }

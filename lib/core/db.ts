@@ -36,6 +36,7 @@ export interface EntryRow {
   sourceId: number | null
   pageRange: string
   symbolKeywords: string[]  // parsed
+  personalNotes: string
   createdAt: Date
   updatedAt: Date
 }
@@ -47,7 +48,6 @@ export function parseEntry(raw: any): EntryRow {
     tags: JSON.parse(raw.tags || '[]'),
     refs: JSON.parse(raw.refs || '[]'),
     symbolKeywords: JSON.parse(raw.symbolKeywords || '[]'),
-    embedding: undefined, // client'a gönderme, büyük veri
   }
 }
 

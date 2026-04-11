@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   description: 'A navigable knowledge base for advanced mathematics research',
 }
 
+import { Suspense } from 'react'
+import { AppProvider } from '@/lib/context/AppContext'
+import AppShell from '@/components/layout/AppShell'
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -29,7 +33,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           `
         }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <Suspense fallback={null}>
+          <AppProvider>
+            <AppShell>
+              {children}
+            </AppShell>
+          </AppProvider>
+        </Suspense>
+      </body>
     </html>
   )
 }

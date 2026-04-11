@@ -1,9 +1,9 @@
-// app/api/entries/route.ts
+// app/api/entry/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma, parseEntry } from '@/lib/core/db'
 import { extractKeywords } from '@/lib/utils'
 
-// GET /api/entries - Tüm entry'leri listele
+// GET /api/entry - Tüm entry'leri listele
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const tag = searchParams.get('tag')
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       id: true, type: true, title: true, content: true,
       tags: true, refs: true, createdAt: true, updatedAt: true,
       versionNote: true,
-      sourceId: true, pageRange: true, symbolKeywords: true,
+      sourceId: true, pageRange: true, symbolKeywords: true, personalNotes: true,
     }
   })
 
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(entries)
 }
 
-// POST /api/entries - Yeni entry oluştur
+// POST /api/entry - Yeni entry oluştur
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { type, title, content, tags, refs, versionNote, sourceId, pageRange } = body

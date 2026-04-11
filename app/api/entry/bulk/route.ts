@@ -1,8 +1,8 @@
-// app/api/entries/bulk/route.ts
+// app/api/entry/bulk/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 
-// DELETE /api/entries/bulk — soft-delete multiple entries at once
+// DELETE /api/entry/bulk — soft-delete multiple entries at once
 export async function DELETE(req: NextRequest) {
     try {
         const body = await req.json()

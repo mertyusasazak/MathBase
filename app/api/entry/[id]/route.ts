@@ -1,6 +1,6 @@
-// app/api/entries/[id]/route.ts
+// app/api/entry/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma, parseEntry, cleanOrphanRefs } from '@/lib/core/db'
+import { prisma, parseEntry} from '@/lib/core/db'
 import { extractKeywords } from '@/lib/utils'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -19,13 +19,26 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const id = parseInt(params.id)
   const body = await req.json()
-  const { type, title, content, tags, refs, versionNote, sourceId, pageRange, isDeleted } = body
+  const { type, title, content, tags, refs, versionNote, sourceId, pageRange, isDeleted, personalNotes } = body
 
   // Mevcut entry'i bul
   const existing = await prisma.entry.findUnique({ where: { id } })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // If this is just a restore operation (only isDeleted changed), skip version/embedding
+  // Fast-path for Personal Notes (skip versions/keywords)
+  if (personalNotes !== undefined && !type && !title && content === undefined && !tags && !refs && isDeleted === undefined) {
+    try {
+      const updated = await prisma.entry.update({
+        where: { id },
+        data: { personalNotes }
+      })
+      return NextResponse.json(parseEntry(updated))
+    } catch (err: any) {
+      return NextResponse.json({ error: 'Failed to update personal notes: ' + err.message }, { status: 500 })
+    }
+  }
+
+  // Fast-path for Restore operation
   if (isDeleted !== undefined && !type && !title && content === undefined && !tags && !refs) {
     const updated = await prisma.entry.update({
       where: { id },
@@ -64,6 +77,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       ...(sourceId !== undefined && { sourceId: sourceId || null }),
       ...(pageRange !== undefined && { pageRange }),
       ...(isDeleted !== undefined && { isDeleted }),
+      ...(personalNotes !== undefined && { personalNotes }),
       symbolKeywords: JSON.stringify(symbolKeywords),
     }
   })

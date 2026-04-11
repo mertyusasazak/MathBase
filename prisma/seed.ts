@@ -58,7 +58,6 @@ async function main() {
         content: s.content,
         tags: JSON.stringify(s.tags),
         refs: JSON.stringify(s.refs),
-        embedding: JSON.stringify([]),
       }
     })
   }

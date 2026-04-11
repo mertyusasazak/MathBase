@@ -3,13 +3,14 @@
 import React from 'react'
 import dynamic from 'next/dynamic'
 import { Entry, SourceOption, EntryOption, Relation } from '@/types'
-import { Trash2, Sparkles, X, Save, AlertTriangle, ChevronDown, ChevronUp, Link2, Tag, FileText } from 'lucide-react'
+import { Trash2, X, Save, AlertTriangle, ChevronDown, ChevronUp, Link2, Tag, FileText, HelpCircle } from 'lucide-react'
 import { theme } from '@/lib/core/theme'
 import { Button, Input, Select, Badge } from '@/components/ui/Common'
 import { renderTitle } from '@/lib/core/math'
 import { MathRenderer } from '@/lib/core/MathRenderer'
 import { ENTRY_TYPES, TYPE_COLORS, RELATION_LABELS } from '@/lib/core/constants'
 import { useEntryEditor, RELATION_TYPES } from '@/hooks/useEntryEditor'
+import { MathGuide } from './MathGuide'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 
@@ -41,7 +42,7 @@ const CollapsibleSection = ({
   onToggle: (id: string) => void,
   children: React.ReactNode
 }) => (
-  <div style={{ borderTop: `1px solid ${theme.colors.border}`, background: theme.colors.surface }}>
+  <div style={{ borderTop: `1px solid ${theme.colors.border}`, background: 'transparent' }}>
     <div
       onClick={() => onToggle(id)}
       style={{
@@ -82,13 +83,52 @@ export default function EntryEditor(props: Props) {
   
   // Separation of Logic:
   const { state, refs, actions } = useEntryEditor(props)
+  const [showMathGuide, setShowMathGuide] = React.useState(false)
+
+  const handleInsertMath = (code: string) => {
+    if (refs.editorRef.current) {
+      const editor = refs.editorRef.current
+      const selection = editor.getSelection()
+      if (selection) {
+        editor.executeEdits('math-guide', [{
+          range: selection,
+          text: code,
+          forceMoveMarkers: true
+        }])
+        editor.focus()
+      }
+    }
+  }
 
   // Dynamic Monaco Theme Binding
-  const [monacoTheme, setMonacoTheme] = React.useState('vs-dark')
+  const [monacoTheme, setMonacoTheme] = React.useState('mathbase-dark')
+  
+  const handleEditorBeforeMount = (monaco: any) => {
+    // Custom Dark Theme
+    monaco.editor.defineTheme('mathbase-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': '#0d0e12',
+      }
+    })
+    
+    // Custom Light Theme
+    monaco.editor.defineTheme('mathbase-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': '#eceef1',
+      }
+    })
+  }
+
   React.useEffect(() => {
     const updateTheme = () => {
       const isLight = document.documentElement.getAttribute('data-theme') === 'light'
-      setMonacoTheme(isLight ? 'vs' : 'vs-dark')
+      setMonacoTheme(isLight ? 'mathbase-light' : 'mathbase-dark')
     }
     updateTheme()
     const observer = new MutationObserver(updateTheme)
@@ -97,7 +137,7 @@ export default function EntryEditor(props: Props) {
   }, [])
 
   return (
-    <div style={{
+    <div ref={refs.containerRef} style={{
       display: 'flex',
       flex: 1,
       width: '100%',
@@ -123,7 +163,7 @@ export default function EntryEditor(props: Props) {
           display: 'flex',
           gap: 12,
           alignItems: 'center',
-          background: theme.colors.surface
+          background: theme.colors.background
         }}>
           <div style={{ width: 140 }}>
             <Select
@@ -139,10 +179,18 @@ export default function EntryEditor(props: Props) {
             fullWidth
             style={{ fontSize: '1.1rem', fontWeight: 600, border: 'none', background: 'transparent' }}
           />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowMathGuide(!showMathGuide)}
+            icon={<HelpCircle size={18} color={showMathGuide ? theme.colors.accent : theme.colors.textMuted} />}
+            style={{ width: 40, height: 40, padding: 0 }}
+            title="Math Syntax Guide"
+          />
         </div>
 
-        {/* Combined Scroll Area (Consolidated logic for word-wrap and dark part fix) */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
+        {/* Combined Scroll Area (Now strictly flex, internal areas scroll) */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* Duplicate Warning */}
           {state.duplicates.length > 0 && (
             <div style={{ padding: '12px 20px', background: '#ffa50011', borderBottom: `1px solid #ffa50044`, display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -160,7 +208,8 @@ export default function EntryEditor(props: Props) {
 
           {/* Monaco Editor Container - Stretches to fill gap */}
           <div ref={refs.editorContainerRef} style={{ 
-            flex: 1,
+            flex: 2, // Take more space
+            minHeight: 300,
             width: '100%',
             overflow: 'hidden', 
             position: 'relative',
@@ -174,6 +223,7 @@ export default function EntryEditor(props: Props) {
               value={state.content}
               onChange={v => actions.setContent(v || '')}
               theme={monacoTheme}
+              beforeMount={handleEditorBeforeMount}
               onMount={(editor) => {
                 refs.editorRef.current = editor
               }}
@@ -203,12 +253,15 @@ export default function EntryEditor(props: Props) {
             />
           </div>
 
-          {/* Property Pane */}
+          {/* Property Pane - Scrollable if too many relations */}
           <div style={{ 
+            flex: '0 1 auto', 
+            maxHeight: '45%',
             display: 'flex', 
             flexDirection: 'column', 
-            background: theme.colors.surface,
-            overflow: 'visible',
+            background: theme.colors.background,
+            overflowY: 'auto',
+            overflowX: 'hidden',
             borderTop: `1px solid ${theme.colors.border}`
           }}>
             {/* Source Selection */}
@@ -255,28 +308,7 @@ export default function EntryEditor(props: Props) {
                 onChange={e => actions.setTags(e.target.value)}
                 placeholder="Tags: topology, calculus, …"
                 fullWidth
-                rightAction={
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onMouseDown={e => e.preventDefault()}
-                    onClick={actions.handleAISuggestTags}
-                    disabled={state.aiLoading === 'tags'}
-                    icon={<Sparkles size={14} color={theme.colors.accent} />}
-                    style={{ padding: 4, height: 28, width: 28, minWidth: 'auto' }}
-                  />
-                }
               />
-              {state.aiTagSuggestions.length > 0 && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.7rem', color: theme.colors.textMuted }}>Suggested:</span>
-                  {state.aiTagSuggestions.map(t => (
-                    <Badge key={t} onClick={() => actions.acceptTag(t)} style={{ cursor: 'pointer' }}>
-                      +{t}
-                    </Badge>
-                  ))}
-                </div>
-              )}
             </CollapsibleSection>
 
             <CollapsibleSection
@@ -307,17 +339,6 @@ export default function EntryEditor(props: Props) {
                       onFocus={() => actions.setIsRefSearchOpen(true)}
                       placeholder="Search entries to link..."
                       fullWidth
-                      rightAction={
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onMouseDown={e => e.preventDefault()}
-                          onClick={actions.handleAISuggestRefs}
-                          disabled={state.aiLoading === 'refs'}
-                          icon={<Sparkles size={14} color={theme.colors.accent} />}
-                          style={{ padding: 4, height: 28, width: 28, minWidth: 'auto' }}
-                        />
-                      }
                     />
                   </div>
 
@@ -334,7 +355,7 @@ export default function EntryEditor(props: Props) {
                         zIndex: 300,
                         maxHeight: 250,
                         overflowY: 'auto',
-                        background: theme.colors.surface,
+                        background: theme.colors.background,
                         border: `1px solid ${theme.colors.border}`,
                         borderRadius: 8,
                         boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
@@ -395,7 +416,6 @@ export default function EntryEditor(props: Props) {
                 {state.refs.map((refId, idx) => {
                   const entry = allEntries.find(e => e.id === refId)
                   if (!entry) return null
-                  const isSuggested = state.aiRefSuggestions.includes(refId)
 
                   return (
                     <div key={refId} style={{
@@ -428,9 +448,7 @@ export default function EntryEditor(props: Props) {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           border: `1px solid ${theme.colors.border}`, fontSize: '0.7rem'
                         }}>
-                          <Badge variant="solid" color={isSuggested ? theme.colors.success : theme.colors.accent} style={{ padding: 0, minWidth: 'auto', background: 'transparent' }}>
-                            {isSuggested ? '✦' : '•'}
-                          </Badge>
+                          <div style={{ width: 4, height: 4, borderRadius: '50%', background: theme.colors.accent }} />
                         </div>
                         <span
                           style={{ fontSize: '0.85rem', color: theme.colors.textDim, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
@@ -476,7 +494,7 @@ export default function EntryEditor(props: Props) {
           gap: 12,
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: theme.colors.surface
+          background: theme.colors.background
         }}>
           {actions.onDelete ? (
             <Button
@@ -510,6 +528,9 @@ export default function EntryEditor(props: Props) {
             </Button>
           </div>
         </div>
+        {showMathGuide && (
+          <MathGuide onClose={() => setShowMathGuide(false)} onInsert={handleInsertMath} />
+        )}
       </div>
 
       {/* ── DRAG HANDLE ── */}
@@ -583,7 +604,7 @@ export default function EntryEditor(props: Props) {
                   borderRadius: 20,
                   border: `1px solid ${theme.colors.border}`,
                   color: theme.colors.textMuted,
-                  background: theme.colors.surface
+                  background: theme.colors.background
                 }}>#{t}</span>
               ))}
             </div>

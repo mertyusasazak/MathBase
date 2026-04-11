@@ -10,7 +10,7 @@ export function useMathBase() {
 
   const loadEntries = useCallback(async () => {
     try {
-      const res = await fetch('/api/entries')
+      const res = await fetch('/api/entry')
       const data = await res.json()
       setEntries(data)
     } catch (e) {
@@ -68,7 +68,7 @@ export function useMathBase() {
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this entry?')) return false
     try {
-      await fetch(`/api/entries/${id}`, { method: 'DELETE' })
+      await fetch(`/api/entry/${id}`, { method: 'DELETE' })
       await refreshAll()
       return true
     } catch (e) {
@@ -79,7 +79,7 @@ export function useMathBase() {
 
   const handleRestore = async (item: DeletedItem) => {
     try {
-      const url = item.deletedItemType === 'source' ? `/api/sources/${item.id}` : `/api/entries/${item.id}`
+      const url = item.deletedItemType === 'source' ? `/api/sources/${item.id}` : `/api/entry/${item.id}`
       await fetch(url, { 
         method: 'PUT', 
         headers: { 'Content-Type': 'application/json' }, 
@@ -96,7 +96,7 @@ export function useMathBase() {
   const handlePermanentDelete = async (item: DeletedItem) => {
     if (!confirm('Are you sure you want to permanently delete this item?\nThis action cannot be undone.')) return false
     try {
-      const url = item.deletedItemType === 'source' ? `/api/sources/permanent/${item.id}` : `/api/entries/permanent/${item.id}`
+      const url = item.deletedItemType === 'source' ? `/api/sources/permanent/${item.id}` : `/api/entry/permanent/${item.id}`
       await fetch(url, { method: 'DELETE' })
       await loadDeleted()
       return true

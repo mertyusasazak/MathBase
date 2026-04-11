@@ -13,9 +13,7 @@ export async function GET() {
       ...e,
       tags: JSON.parse(e.tags || '[]'),
       refs: JSON.parse(e.refs || '[]'),
-      embedding: JSON.parse(e.embedding || '[]'),
       symbolKeywords: JSON.parse(e.symbolKeywords || '[]'),
-      chatHistory: JSON.parse(e.chatHistory || '[]'),
     }))
 
     const backupData = {

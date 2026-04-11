@@ -13,6 +13,7 @@ export interface Entry {
   sourceId?: number | null; 
   pageRange?: string; 
   symbolKeywords?: string[];
+  personalNotes?: string;
   _backlinkIds?: number[];
 }
 
@@ -54,9 +55,3 @@ export interface EntryOption {
   tags: string[];
 }
 
-export interface CandidateEntry {
-  type: string;
-  title: string;
-  content: string;
-  pageHint?: string;
-}

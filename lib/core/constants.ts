@@ -8,6 +8,17 @@ export const TYPE_COLORS: Record<string, string> = {
   source: 'var(--source)'
 }
 
+export const SOURCE_TYPE_COLORS: Record<string, string> = {
+  pdf: '#dc2626',
+  book: '#7c3aed',
+  lecture: '#f59e0b',
+  paper: '#2563eb',
+  manual: '#6b7280',
+  markdown: '#059669',
+  other: '#6b7280',
+  source: 'var(--source)'
+}
+
 export const ENTRY_TYPES = ['definition', 'theorem', 'lemma', 'corollary', 'example', 'remark']
 
 export const RELATION_LABELS: Record<string, string> = {

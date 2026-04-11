@@ -9,24 +9,20 @@ import {
   Trash2,
   BookOpen,
   Plus,
-  PanelLeft
+  PanelLeft,
+  FileUp
 } from 'lucide-react'
 import { theme } from '@/lib/core/theme'
 import { Button } from '@/components/ui/Common'
-import { useSidebarLogic } from '@/hooks/useSidebarLogic'
 
 interface SidebarProps {
   sidebarOpen: boolean
-  activeView: 'dashboard' | 'entries' | 'graph' | 'entry' | 'sources' | 'deleted'
-  goToView: (view: 'dashboard' | 'entries' | 'graph' | 'sources' | 'deleted') => void
+  activeView: 'dashboard' | 'entry' | 'graph' | 'sources' | 'deleted'
+  goToView: (view: 'dashboard' | 'entry' | 'graph' | 'sources' | 'deleted') => void
   deletedEntries: DeletedItem[]
   onNewEntry: () => void
   onToggleSidebar: () => void
 }
-
-import { CandidateEntry } from '@/types'
-import { FileUp } from 'lucide-react'
-import ImportReviewModal from '@/components/features/pdf/ImportReviewModal'
 
 import { SunMedium, Moon } from 'lucide-react'
 
@@ -36,190 +32,205 @@ export default function Sidebar({
   onNewEntry,
   onToggleSidebar
 }: SidebarProps) {
-  const { state, actions } = useSidebarLogic()
-  
-  // PDF Import State'leri
+  const [logoHover, setLogoHover] = React.useState(false)
+
+  // Restore State'leri
   const [isUploading, setIsUploading] = React.useState(false)
-  const [candidates, setCandidates] = React.useState<CandidateEntry[]>([])
-  const [showModal, setShowModal] = React.useState(false)
+  const [jsonToRestore, setJsonToRestore] = React.useState<any>(null)
+  const [showRestoreModal, setShowRestoreModal] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
-
-
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    if (file.name.endsWith('.json')) {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const json = JSON.parse(event.target?.result as string)
+          setJsonToRestore(json)
+          setShowRestoreModal(true)
+        } catch (err) {
+          alert('Error reading JSON. Please ensure it is a valid backup file.')
+        } finally {
+          setIsUploading(false)
+          if (fileInputRef.current) fileInputRef.current.value = ''
+        }
+      }
+      reader.readAsText(file)
+      return
+    }
+
+    alert('Unsupported file format. Please select a .json backup file.')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleConfirmRestore = async (mode: 'merge' | 'replace') => {
+    if (!jsonToRestore) return
     setIsUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const res = await fetch('/api/import/pdf', {
+      const res = await fetch(`/api/import/json?mode=${mode}`, {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jsonToRestore)
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to parse PDF')
-      
-      setCandidates(data.candidates || [])
-      setShowModal(true)
+      if (!res.ok) throw new Error('Restore failed')
+      setShowRestoreModal(false)
+      window.location.reload()
     } catch (err: any) {
       alert(err.message)
     } finally {
       setIsUploading(false)
-      // Reset file input
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
-  const handleConfirmImport = async (selected: CandidateEntry[]) => {
-    try {
-      // Loop ile teker teker POST atarak DB'ye ekle
-      for (const cand of selected) {
-        await fetch('/api/entries', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: cand.title,
-            type: cand.type,
-            content: cand.content,
-            tags: [],
-            versionNote: 'PDF import'
-          })
-        })
-      }
-      setShowModal(false)
-      setCandidates([])
-      window.location.reload() // Dashboard'u güncellemek için tazeleyici basit çözüm
-    } catch (err: any) {
-      alert('Error while saving: ' + err.message)
     }
   }
 
   return (
-    <div style={{
-      width: sidebarOpen ? 272 : 72,
-      minWidth: sidebarOpen ? 272 : 72,
-      background: theme.colors.background,
-      borderRight: `1px solid ${theme.colors.border}`,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'visible',
-      transition: theme.animations.normal,
-      position: 'relative',
-      zIndex: 50
-    }}>
-      {/* LOGO & TOGGLE ALANI */}
-      <div style={{
-        padding: sidebarOpen ? '16px 20px' : '16px 0',
-        height: 64,
-        boxSizing: 'border-box',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: sidebarOpen ? 'space-between' : 'center',
-        transition: theme.animations.normal,
-        userSelect: 'none'
-      }}>
-        {sidebarOpen ? (
-          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-            <div style={{ animation: `fadeIn ${theme.animations.fast}` }}>
-              <div style={{ fontFamily: theme.typography.serif, fontSize: '1.4rem', color: theme.colors.accent, fontWeight: 600, lineHeight: 1 }}>∂ MathBase</div>
-              <div style={{ fontFamily: theme.typography.sans, fontSize: '0.65rem', color: theme.colors.textMuted, marginTop: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>KNOWLEDGE REPOSITORY</div>
+    <>
+      <div 
+        className="glass"
+        style={{ 
+          width: sidebarOpen ? 280 : 80, 
+          height: '100vh', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          transition: theme.animations.normal, 
+          zIndex: 100,
+          boxShadow: 'var(--shadow-lg)'
+        }}
+      >
+        {/* LOGO & TOGGLE ALANI */}
+        <div style={{
+          padding: sidebarOpen ? '16px 20px' : '16px 0',
+          height: 64,
+          boxSizing: 'border-box',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: sidebarOpen ? 'space-between' : 'center',
+          transition: theme.animations.normal,
+          userSelect: 'none'
+        }}>
+          {sidebarOpen ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <div style={{ animation: `fadeIn ${theme.animations.fast}` }}>
+                <div style={{ fontFamily: theme.typography.serif, fontSize: '1.4rem', color: theme.colors.accent, fontWeight: 600, lineHeight: 1 }}>∂ MathBase</div>
+                <div style={{ fontFamily: theme.typography.sans, fontSize: '0.65rem', color: theme.colors.textMuted, marginTop: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>KNOWLEDGE REPOSITORY</div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onToggleSidebar}
+                style={{ width: 32, height: 32, padding: 0 }}
+                icon={<PanelLeft size={18} />}
+              />
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
+          ) : (
+            <div
               onClick={onToggleSidebar}
-              style={{ width: 32, height: 32, padding: 0 }}
-              icon={<PanelLeft size={18} />}
-            />
-          </div>
-        ) : (
-          <div
-            onClick={onToggleSidebar}
-            onMouseEnter={() => actions.setLogoHover(true)}
-            onMouseLeave={() => actions.setLogoHover(false)}
-            style={{
-              width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: theme.animations.fast, cursor: 'pointer',
-              background: state.logoHover ? theme.colors.surface : 'transparent', borderRadius: 6
-            }}
+              onMouseEnter={() => setLogoHover(true)}
+              onMouseLeave={() => setLogoHover(false)}
+              style={{
+                width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: theme.animations.fast, cursor: 'pointer',
+                background: logoHover ? theme.colors.surface : 'transparent', borderRadius: 6
+              }}
+            >
+              {logoHover ? (
+                <PanelLeft size={18} color={theme.colors.text} style={{ animation: `fadeIn ${theme.animations.fast}` }} />
+              ) : (
+                <div style={{ fontFamily: theme.typography.serif, fontSize: '1.2rem', color: theme.colors.accent, fontWeight: 600 }}>MB</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Ana Navigasyon */}
+        <div style={{ padding: sidebarOpen ? '20px 12px' : '20px 8px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+          {sidebarOpen && (
+            <div style={{
+              fontFamily: theme.typography.sans, fontSize: '0.65rem', textTransform: 'uppercase',
+              letterSpacing: '0.1em', color: theme.colors.textMuted, paddingLeft: 8, marginBottom: 8
+            }}>
+              Views
+            </div>
+          )}
+          <NavButton active={activeView === 'dashboard'} onClick={() => goToView('dashboard')} icon={<LayoutDashboard size={18} />} label="Dashboard" sidebarOpen={sidebarOpen} />
+          <NavButton active={activeView === 'entry'} onClick={() => goToView('entry')} icon={<Library size={18} />} label="Library" sidebarOpen={sidebarOpen} />
+          <NavButton active={activeView === 'graph'} onClick={() => goToView('graph')} icon={<Network size={18} />} label="Graph View" sidebarOpen={sidebarOpen} />
+          <NavButton active={activeView === 'sources'} onClick={() => goToView('sources')} icon={<BookOpen size={18} />} label="Sources" sidebarOpen={sidebarOpen} />
+          <NavButton active={activeView === 'deleted'} onClick={() => goToView('deleted')} icon={<Trash2 size={18} />} label="Trash" sidebarOpen={sidebarOpen} count={deletedEntries.length} isRed />
+        </div>
+
+        {/* Footer Actions */}
+        <div style={{
+          padding: sidebarOpen ? '16px 16px' : '16px 8px',
+          borderTop: `1px solid ${theme.colors.border}`,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6
+        }}>
+          <Button
+            variant="gold"
+            onClick={onNewEntry}
+            fullWidth={sidebarOpen}
+            style={{ height: sidebarOpen ? 42 : 44, padding: sidebarOpen ? undefined : 0 }}
+            icon={<Plus size={18} strokeWidth={2.5} />}
           >
-            {state.logoHover ? (
-              <PanelLeft size={18} color={theme.colors.text} style={{ animation: `fadeIn ${theme.animations.fast}` }} />
-            ) : (
-              <div style={{ fontFamily: theme.typography.serif, fontSize: '1.2rem', color: theme.colors.accent, fontWeight: 600 }}>MB</div>
-            )}
-          </div>
-        )}
+            {sidebarOpen && "New Entry"}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            fullWidth={sidebarOpen}
+            style={{ height: sidebarOpen ? 42 : 44, padding: sidebarOpen ? undefined : 0 }}
+            icon={<FileUp size={18} />}
+          >
+            {sidebarOpen && (isUploading ? 'Loading...' : 'JSON Import')}
+          </Button>
+          <input
+            type="file"
+            accept=".json"
+            style={{ display: 'none' }}
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+          />
+        </div>
       </div>
 
-      {/* Ana Navigasyon */}
-      <div style={{ padding: sidebarOpen ? '20px 12px' : '20px 8px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-        {sidebarOpen && (
-          <div style={{
-            fontFamily: theme.typography.sans, fontSize: '0.65rem', textTransform: 'uppercase',
-            letterSpacing: '0.1em', color: theme.colors.textMuted, paddingLeft: 8, marginBottom: 8
+      {/* MODALS: Moved outside the .glass container to enable true fixed positioning across the screen */}
+
+      {showRestoreModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, backdropFilter: 'blur(8px)', animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div className="glass" style={{
+            padding: 32, borderRadius: 20, maxWidth: 450, width: '90%', textAlign: 'center',
+            border: `1px solid ${theme.colors.border}`, boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
           }}>
-            Views
+            <h2 style={{ fontFamily: theme.typography.serif, fontSize: '1.8rem', marginBottom: 16, color: theme.colors.accent }}>JSON Restore</h2>
+            <p style={{ color: theme.colors.textMuted, fontSize: '0.9rem', lineHeight: 1.6, marginBottom: 24 }}>
+              How would you like to restore this backup?
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Button variant="gold" fullWidth onClick={() => handleConfirmRestore('merge')}>
+                Merge (Keep Existing Data)
+              </Button>
+              <Button variant="outline" fullWidth onClick={() => handleConfirmRestore('replace')} style={{ color: theme.colors.danger }}>
+                Replace (Wipe & Restore)
+              </Button>
+              <Button variant="ghost" fullWidth onClick={() => setShowRestoreModal(false)}>
+                Cancel
+              </Button>
+            </div>
           </div>
-        )}
-        <NavButton active={activeView === 'dashboard'} onClick={() => goToView('dashboard')} icon={<LayoutDashboard size={18} />} label="Dashboard" sidebarOpen={sidebarOpen} />
-        <NavButton active={activeView === 'entries'} onClick={() => goToView('entries')} icon={<Library size={18} />} label="Entries" sidebarOpen={sidebarOpen} />
-        <NavButton active={activeView === 'graph'} onClick={() => goToView('graph')} icon={<Network size={18} />} label="Graph View" sidebarOpen={sidebarOpen} />
-        <NavButton active={activeView === 'sources'} onClick={() => goToView('sources')} icon={<BookOpen size={18} />} label="Sources" sidebarOpen={sidebarOpen} />
-        <NavButton active={activeView === 'deleted'} onClick={() => goToView('deleted')} icon={<Trash2 size={18} />} label="Trash" sidebarOpen={sidebarOpen} count={deletedEntries.length} isRed />
-      </div>
-
-      {/* Footer Actions */}
-      <div style={{
-        padding: sidebarOpen ? '16px 16px' : '16px 8px',
-        borderTop: `1px solid ${theme.colors.border}`,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6
-      }}>
-        <Button
-          variant="gold"
-          onClick={onNewEntry}
-          fullWidth={sidebarOpen}
-          style={{ height: sidebarOpen ? 42 : 44, padding: sidebarOpen ? undefined : 0 }}
-          icon={<Plus size={18} strokeWidth={2.5} />}
-        >
-          {sidebarOpen && "New Entry"}
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          fullWidth={sidebarOpen}
-          style={{ height: sidebarOpen ? 42 : 44, padding: sidebarOpen ? undefined : 0 }}
-          icon={<FileUp size={18} />}
-        >
-          {sidebarOpen && (isUploading ? 'Loading...' : 'PDF Import')}
-        </Button>
-        <input 
-          type="file" 
-          accept="application/pdf" 
-          style={{ display: 'none' }} 
-          ref={fileInputRef} 
-          onChange={handleFileSelect} 
-        />
-
-
-      </div>
-
-      {showModal && (
-        <ImportReviewModal 
-          candidates={candidates}
-          onConfirm={handleConfirmImport}
-          onClose={() => { setShowModal(false); setCandidates([]); }}
-        />
+        </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -266,9 +277,9 @@ function NavButton({ active, onClick, icon, label, sidebarOpen, count, isRed }: 
       )}
 
       {/* Icon with drop-shadow glow */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center'
       }}>
         {icon}

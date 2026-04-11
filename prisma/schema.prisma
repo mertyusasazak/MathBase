@@ -30,8 +30,6 @@ model Entry {
   content        String   // LaTeX + markdown
   tags           String   // JSON array string olarak saklanır: '["analysis","topology"]'
   refs           String   @default("[]") // JSON array of Entry IDs
-  embedding      String   @default("[]") // JSON float array - semantic search için
-  chatHistory    String   @default("[]") // Qwen AI sohbet geçmişini JSON olarak tutacak alan
   sourceId       Int?
   source         Source?  @relation(fields: [sourceId], references: [id])
   pageRange      String   @default("")
@@ -39,6 +37,7 @@ model Entry {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   versionNote    String?
+  personalNotes  String   @default("")
   isDeleted      Boolean  @default(false)
 
   // Versiyon geçmişi

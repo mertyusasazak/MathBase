@@ -1,53 +1,157 @@
 :root {
-  /* Dark Mode (Default for MathBase) */
-  --bg: #0a0a0c;
-  --surface: #16161a;
-  --surface-hover: #1e1e24;
-  --surface-active: #33333a;
-  --border: #2a2a33;
+  /* Professional Dark Mode - Midnight Academy Aesthetic */
+  --bg: #0d0e12;
+  --surface: #171921;
+  --surface-hover: #1f222d;
+  --surface-active: #2a2e3a;
+  --border: #262a33;
   --accent: #c9a84c;
   --accent-muted: #c9a84c22;
   --accent-dark: #b8972f;
-  --on-accent: #0a0a0c;
-  --text: #e8e6df;
-  --text-muted: #7a7870;
-  --text-dim: #b8b5ae;
-  --danger: #c96b6b;
-  --danger-muted: #c96b6b22;
+  --on-accent: #0d0e12;
+  --text: #eceef2;
+  --text-muted: #8e96aa;
+  --text-dim: #b1b8c9;
+  --danger: #ef4444;
+  --danger-muted: #ef444422;
   --success: #10b981;
   --success-muted: #10b98122;
   --source: #06b6d4;
   --source-muted: #06b6d422;
+
+  /* Premium Elevations */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.25);
+  --glass-bg: rgba(23, 25, 33, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="light"] {
-  /* Light Mode Palette - Higher Contrast */
-  --bg: #fdfdfd;
+  /* Professional Light Mode - Eye-Friendly Gray Aesthetic */
+  --bg: #eceef1;
   --surface: #ffffff;
-  --surface-hover: #f0f0f2;
-  --surface-active: #e8e9eb;
-  --border: #d0d0d8;
-  --accent: #866619;
-  --accent-muted: #86661912;
-  --accent-dark: #7d5f18;
-  --on-accent: #000000;
-  --text: #0a0a0c;
-  --text-muted: #44444a;
-  --text-dim: #222225;
-  --danger: #b33939;
-  --danger-muted: #b3393910;
-  --success: #059669;
-  --success-muted: #05966910;
-  --source: #0891b2;
-  --source-muted: #0891b210;
+  --surface-hover: #f3f4f6;
+  --surface-active: #e5e7eb;
+  --border: #d1d5db;
+  --accent: #725712;
+  --accent-muted: #72571212;
+  --accent-dark: #614a0f;
+  --on-accent: #ffffff;
+  --text: #1a1d23;
+  --text-muted: #6a737d;
+  --text-dim: #444d56;
+  --danger: #b91c1c;
+  --danger-muted: #b91c1c10;
+  --success: #15803d;
+  --success-muted: #15803d10;
+  --source: #0369a1;
+  --source-muted: #0369a110;
+
+  /* Premium Elevations Light */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
+  --glass-bg: rgba(247, 248, 250, 0.75);
+  --glass-border: rgba(0, 0, 0, 0.05);
 }
 
 body {
   background-color: var(--bg);
   color: var(--text);
   transition: background-color 0.3s ease, color 0.3s ease;
+  margin: 0;
+  font-family: 'Instrument Sans', sans-serif;
+  height: 100%;
 }
 
 * {
-  transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+button {
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.85;
+}
+
+.row-hover-group:hover {
+  background: var(--surface-hover) !important;
+}
+
+.katex-display {
+  text-align: left !important;
+  margin: 1em 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.monaco-editor {
+  border-radius: 0 !important;
+}
+
+.glow-card {
+  transition: all 0.2s !important;
+}
+
+.glow-card:hover {
+  border-color: var(--accent) !important;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Glassmorphism Premium Style */
+.glass {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-md);
+}
+
+.page-transition-enter {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Premium Button States */
+button:active {
+  transform: scale(0.96);
+}
+
+.btn-action-animate {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.btn-action-animate:hover {
+  transform: scale(1.18) translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.btn-action-animate:active {
+  transform: scale(0.95);
 }

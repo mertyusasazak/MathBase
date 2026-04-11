@@ -39,11 +39,8 @@ export function useEntryEditor({
     initialRelations.reduce((acc, r) => ({ ...acc, [r.toEntryId]: r.relationType }), {})
   )
   
-  // UI Loading & Suggestions
+  // UI Loading
   const [saving, setSaving] = useState(false)
-  const [aiLoading, setAiLoading] = useState<'tags' | 'refs' | null>(null)
-  const [aiTagSuggestions, setAiTagSuggestions] = useState<string[]>([])
-  const [aiRefSuggestions, setAiRefSuggestions] = useState<number[]>([])
   
   // Search state
   const [refSearch, setRefSearch] = useState('')
@@ -60,88 +57,20 @@ export function useEntryEditor({
   
   const editorRef = useRef<any>(null)
   const editorContainerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // Section visibility
   const [openSections, setOpenSections] = useState({
-    sources: true,
-    tags: true,
-    relations: true
+    sources: false,
+    tags: false,
+    relations: false
   })
 
-  // Duplicate detection
   useEffect(() => {
-    if (title.length > 3) {
-      const timer = setTimeout(async () => {
-        try {
-          const res = await fetch(`/api/entries/duplicates?title=${encodeURIComponent(title)}&exclude=${initial?.id || ''}`)
-          const data = await res.json()
-          setDuplicates(data.duplicates || [])
-        } catch (e) {
-          console.error('Duplicate check failed', e)
-        }
-      }, 500)
-      return () => clearTimeout(timer)
-    } else {
-      setDuplicates([])
-    }
-  }, [title, initial?.id])
+    // Duplicate detection was removed with AI features.
+    setDuplicates([])
+  }, [title])
 
-  // AI Suggest Tags
-  const handleAISuggestTags = useCallback(async () => {
-    if (!content || content.length < 10) return
-    setAiLoading('tags')
-    try {
-      const res = await fetch('/api/ai/suggest-tags', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, title })
-      })
-      const data = await res.json()
-      setAiTagSuggestions(data.tags || [])
-    } catch {
-      // ignore
-    } finally {
-      setAiLoading('tags') // Wait, should be null? Yes.
-      setAiLoading(null)
-    }
-  }, [content, title])
-
-  // AI Suggest Relations
-  const handleAISuggestRefs = useCallback(async () => {
-    if (!content || content.length < 20) return
-    setAiLoading('refs')
-    try {
-      const res = await fetch('/api/ai/suggest-refs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, title, entries: allEntries })
-      })
-      const data = await res.json()
-      const suggestedIds = data.refs || []
-      setAiRefSuggestions(suggestedIds)
-      
-      // Auto-add them
-      setRefs(prev => {
-        const next = [...prev]
-        suggestedIds.forEach((id: number) => {
-          if (!next.includes(id)) next.push(id)
-        })
-        return next
-      })
-    } catch {
-      // ignore
-    } finally {
-      setAiLoading(null)
-    }
-  }, [content, title, allEntries])
-
-  const acceptTag = (tag: string) => {
-    const current = tags.split(',').map(t => t.trim()).filter(Boolean)
-    if (!current.includes(tag)) {
-      setTags([...current, tag].join(', '))
-    }
-    setAiTagSuggestions(prev => prev.filter(t => t !== tag))
-  }
 
   const toggleSection = (id: string) => {
     setOpenSections(prev => ({ ...prev, [id]: !prev[id as keyof typeof prev] }))
@@ -159,8 +88,10 @@ export function useEntryEditor({
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return
-      const newWidth = (e.clientX / window.innerWidth) * 100
+      if (!isResizing || !containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const offsetX = e.clientX - rect.left
+      const newWidth = (offsetX / rect.width) * 100
       if (newWidth > 20 && newWidth < 80) setLeftWidth(newWidth)
     }
     const handleMouseUp = () => setIsResizing(false)
@@ -234,17 +165,17 @@ export function useEntryEditor({
   return {
     state: {
       type, title, content, tags, sourceId, pageRange,
-      refs, refRelations, saving, aiLoading, aiTagSuggestions, aiRefSuggestions,
+      refs, refRelations, saving,
       refSearch, activeRelType, isRefSearchOpen, dropdownPosition,
       leftWidth, isResizing, duplicates, versionNote, openSections
     },
     refs: {
-      editorRef, editorContainerRef, searchContainerRef
+      editorRef, editorContainerRef, searchContainerRef, containerRef
     },
     actions: {
       setType, setTitle, setContent, setTags, setSourceId, setPageRange,
       setRefSearch, setActiveRelType, setIsRefSearchOpen, setVersionNote,
-      handleAISuggestTags, handleAISuggestRefs, acceptTag, toggleSection, toggleRef,
+      toggleSection, toggleRef,
       startResizing, handleSave, onCancel, onDelete, setRefRelations
     }
   }
