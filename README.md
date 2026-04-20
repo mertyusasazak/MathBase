@@ -63,6 +63,12 @@ MathBase is an AI-enhanced knowledge management system specifically designed for
 
 ---
 
+## Note
+
+Still in development.
+
+---
+
 ## ⚖️ License
 
 Distributed under the MIT License. See `LICENSE` for more information.
