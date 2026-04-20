@@ -8,6 +8,8 @@ import { renderTitle } from '@/lib/core/math'
 import { Entry, Source } from '@/types'
 import { TYPE_COLORS } from '@/lib/core/constants'
 
+import { useAppContext, THEME_COLORS } from '@/lib/context/AppContext'
+
 interface DashboardViewProps {
   entries: Entry[]
   sources: Source[]
@@ -21,6 +23,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectEntry,
   onCreateEntry
 }) => {
+  const { state: { accentColor, themeMode } } = useAppContext()
+  
   const recentEntries = [...entries]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5)
@@ -76,7 +80,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           const typeKey = stat.label.toLowerCase().includes('source') ? 'source' : 
                          stat.label.toLowerCase().includes('theorem') ? 'theorem' :
                          stat.label.toLowerCase().includes('definition') ? 'definition' : 'accent';
-          const baseColor = typeKey === 'accent' ? theme.colors.accent : (TYPE_COLORS as any)[typeKey];
+          
+          let hex = '';
+          if (typeKey === 'accent') {
+            const colors = THEME_COLORS[accentColor as keyof typeof THEME_COLORS];
+            hex = themeMode === 'dark' ? colors.dark : colors.light;
+          } else if (typeKey === 'source') {
+            hex = '#06b6d4'; // Base source cyan
+          } else {
+            hex = (TYPE_COLORS as any)[typeKey];
+          }
+          
+          const bgColor = `${hex}08`;
+          const borderColor = `${hex}33`;
           
           return (
             <Card 
@@ -85,14 +101,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 textAlign: 'center', 
                 padding: '24px 32px', 
                 minWidth: 140,
-                background: `${baseColor}08`, // Very subtle tint
-                border: `1px solid ${baseColor}33`, // Themed border
+                background: bgColor,
+                border: `1px solid ${borderColor}`,
               }}
             >
               <div style={{
                 fontFamily: theme.typography.serif,
                 fontSize: '2.5rem',
-                color: baseColor,
+                color: hex,
                 lineHeight: 1
               }}>{stat.value}</div>
               <div style={{

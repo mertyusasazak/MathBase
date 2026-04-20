@@ -136,12 +136,12 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                     animation: 'fadeIn 0.2s ease-out', overflow: 'hidden'
                   }}>
                     <div
-                      onClick={() => { 
+                      onClick={() => {
                         // Resolve the actual hex color from AppContext to pass to the API
                         const colors = THEME_COLORS[accentColor]
                         const hex = themeMode === 'dark' ? colors.dark : colors.light
-                        exportToPDF([selected], hex, themeMode); 
-                        setShowExportMenu(false); 
+                        exportToPDF([selected], hex, themeMode);
+                        setShowExportMenu(false);
                       }}
                       style={{
                         padding: '10px 16px', fontSize: '0.85rem', cursor: 'pointer', color: theme.colors.text,
@@ -302,7 +302,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
               }}
             >
               <div style={{
-                width: 36, height: 36, borderRadius: 8, 
+                width: 36, height: 36, borderRadius: 8,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: `${SOURCE_TYPE_COLORS[src.sourceType] || SOURCE_TYPE_COLORS.other}18`,
                 border: `1px solid ${SOURCE_TYPE_COLORS[src.sourceType] || SOURCE_TYPE_COLORS.other}22`
@@ -325,7 +325,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
           <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: 22, marginBottom: 32 }}>
             <MathRenderer content={selected.content} />
           </div>
- 
+
           {state.sections.length > 0 && (
             <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: 24 }}>
               <div style={{
@@ -382,10 +382,10 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
           {/* SEQ NAV */}
           <div style={{ marginTop: 48, display: 'flex', justifyContent: 'space-between', gap: 20 }}>
             {state.prevEntry ? (
-              <Button 
-                variant="outline" 
-                onClick={() => onSelectEntry(state.prevEntry!)} 
-                style={{ flex: 1, height: 'auto', padding: '12px 16px', justifyContent: 'flex-start', gap: 12 }} 
+              <Button
+                variant="outline"
+                onClick={() => onSelectEntry(state.prevEntry!)}
+                style={{ flex: 1, height: 'auto', padding: '12px 16px', justifyContent: 'flex-start', gap: 12 }}
                 icon={<ChevronLeft size={20} />}
               >
                 <div style={{ textAlign: 'left' }}>
@@ -394,13 +394,13 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                 </div>
               </Button>
             ) : <div style={{ flex: 1 }} />}
-            
+
             {state.nextEntry ? (
-              <Button 
-                variant="outline" 
-                onClick={() => onSelectEntry(state.nextEntry!)} 
-                style={{ flex: 1, height: 'auto', padding: '12px 16px', justifyContent: 'flex-end', gap: 12 }} 
-                icon={<ChevronRight size={20} />} 
+              <Button
+                variant="outline"
+                onClick={() => onSelectEntry(state.nextEntry!)}
+                style={{ flex: 1, height: 'auto', padding: '12px 16px', justifyContent: 'flex-end', gap: 12 }}
+                icon={<ChevronRight size={20} />}
                 iconPosition="right"
               >
                 <div style={{ textAlign: 'right' }}>
@@ -434,19 +434,19 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
             <span style={{ fontFamily: theme.typography.sans, fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Personal Notes</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-             {saveStatus === 'saving' && (
-                <span style={{ fontSize: '0.7rem', color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
-                   <RotateCcw size={10} className="spin" /> Saving...
-                </span>
-             )}
-             {saveStatus === 'saved' && (
-                <span style={{ fontSize: '0.7rem', color: theme.colors.success, display: 'flex', alignItems: 'center', gap: 4 }}>
-                   <CheckCircle2 size={10} /> Saved
-                </span>
-             )}
-             {saveStatus === 'error' && (
-                <span style={{ fontSize: '0.7rem', color: theme.colors.danger }}>Error saving</span>
-             )}
+            {saveStatus === 'saving' && (
+              <span style={{ fontSize: '0.7rem', color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <RotateCcw size={10} className="spin" /> Saving...
+              </span>
+            )}
+            {saveStatus === 'saved' && (
+              <span style={{ fontSize: '0.7rem', color: theme.colors.success, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <CheckCircle2 size={10} /> Saved
+              </span>
+            )}
+            {saveStatus === 'error' && (
+              <span style={{ fontSize: '0.7rem', color: theme.colors.danger }}>Error saving</span>
+            )}
           </div>
         </div>
 
@@ -468,7 +468,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
             caretColor: theme.colors.accent
           }}
         />
-        
+
         <div style={{
           padding: '12px 20px',
           fontSize: '0.7rem',
