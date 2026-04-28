@@ -91,15 +91,38 @@ def extract_candidates(pdf_path):
         
         c["keywords"] = list(set(latex_symbols + capitalized))[:8] # Limit to 8 keywords
         
-        # 3. Automatic Relation Detection (Internal Cross-references)
+        # 3. Automatic Relation Detection
         for other in candidates:
             if other == c: continue
-            # Look for "Type Number" of other candidates in current candidate's content
+            
+            is_related = False
+            
+            # A. Internal Cross-references (Explicit: e.g., "Theorem 1.2")
             if other["ref_id"]:
                 search_term = rf"{other['type']}\s+{re.escape(other['ref_id'])}"
                 if re.search(search_term, c["content"], re.IGNORECASE):
-                    if other["title"] not in c["relations"]:
-                        c["relations"].append(other["title"])
+                    is_related = True
+            
+            # B. Title Mention (Implicit: e.g., "Heine-Borel Theorem")
+            if not is_related and len(other["title"]) > 5:
+                if other["title"].lower() in c["content"].lower():
+                    is_related = True
+            
+            # C. Shared Tags (at least 2 common tags)
+            if not is_related:
+                common_tags = set(c["tags"]) & set(other["tags"])
+                if len(common_tags) >= 2:
+                    is_related = True
+            
+            # D. Shared Keywords (at least 2 common keywords)
+            if not is_related:
+                common_keys = set(c["keywords"]) & set(other["keywords"])
+                if len(common_keys) >= 2:
+                    is_related = True
+            
+            if is_related:
+                if other["title"] not in c["relations"]:
+                    c["relations"].append(other["title"])
 
     # Clean up and remove temporary fields
     for c in candidates:

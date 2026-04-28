@@ -68,6 +68,53 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Başlığa göre ilişki kurma (Smart Import desteği)
+  const { relationTitles } = body
+  if (relationTitles && Array.isArray(relationTitles)) {
+    for (const rTitle of relationTitles) {
+      // Bu başlığa sahip bir entry bul (isDeleted=false olanları tercih et)
+      const target = await prisma.entry.findFirst({
+        where: { title: rTitle, isDeleted: false }
+      })
+      
+      if (target && target.id !== entry.id) {
+        // Zaten bir ilişki var mı kontrol et (çift kayıt önlemek için)
+        const exists = await prisma.relation.findFirst({
+          where: {
+            fromEntryId: entry.id,
+            toEntryId: target.id
+          }
+        })
+        
+        if (!exists) {
+          await prisma.relation.create({
+            data: {
+              fromEntryId: entry.id,
+              toEntryId: target.id,
+              relationType: 'related_to',
+              createdBy: 'system'
+            }
+          })
+          
+          // Opsiyonel: Çift yönlü ilişki kurma
+          const reverseExists = await prisma.relation.findFirst({
+            where: { fromEntryId: target.id, toEntryId: entry.id }
+          })
+          if (!reverseExists) {
+            await prisma.relation.create({
+              data: {
+                fromEntryId: target.id,
+                toEntryId: entry.id,
+                relationType: 'related_to',
+                createdBy: 'system'
+              }
+            })
+          }
+        }
+      }
+    }
+  }
+
   // İlk versiyonu kaydet
   await prisma.entryVersion.create({
     data: {

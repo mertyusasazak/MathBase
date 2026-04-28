@@ -153,7 +153,8 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
           tags: candidate.tags,
           manualKeywords: candidate.keywords,
           sourceId: sourceId,
-          pageRange: candidate.pageRange
+          pageRange: candidate.pageRange,
+          relationTitles: candidate.relations
         })
       })
       if (!res.ok) throw new Error('Save failed')
