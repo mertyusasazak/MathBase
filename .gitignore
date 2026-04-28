@@ -41,3 +41,7 @@ coverage/
 # optional
 *.pem
 CLAUDE.md
+
+# uploads 
+public/uploads/ 
+ 
