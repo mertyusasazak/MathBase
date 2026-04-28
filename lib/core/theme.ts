@@ -32,5 +32,10 @@ export const theme = {
   animations: {
     fast: '0.15s cubic-bezier(0.4, 0, 0.2, 1)',
     normal: '0.25s cubic-bezier(0.23, 1, 0.32, 1)',
+  },
+  shadows: {
+    sm: 'var(--shadow-sm)',
+    md: 'var(--shadow-md)',
+    lg: 'var(--shadow-lg)',
   }
 }

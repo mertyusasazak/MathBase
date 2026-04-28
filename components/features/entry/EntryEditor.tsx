@@ -2,6 +2,7 @@
 
 import React from 'react'
 import dynamic from 'next/dynamic'
+import { createPortal } from 'react-dom'
 import { Entry, SourceOption, EntryOption, Relation } from '@/types'
 import { Trash2, X, Save, AlertTriangle, ChevronDown, ChevronUp, Link2, Tag, FileText, HelpCircle } from 'lucide-react'
 import { theme } from '@/lib/core/theme'
@@ -343,16 +344,17 @@ export default function EntryEditor(props: Props) {
                   </div>
 
                   {/* Search Results Dropdown */}
-                  {state.isRefSearchOpen && (
+                  {state.isRefSearchOpen && state.dropdownRect && createPortal(
                     <>
                       <div
-                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 150 }}
+                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000 }}
                         onClick={() => actions.setIsRefSearchOpen(false)}
                       />
                       <div style={{
-                        position: 'absolute',
-                        left: 0, right: 0,
-                        zIndex: 300,
+                        position: 'fixed',
+                        left: state.dropdownRect.left,
+                        width: state.dropdownRect.width,
+                        zIndex: 1001,
                         maxHeight: 250,
                         overflowY: 'auto',
                         background: theme.colors.background,
@@ -360,8 +362,8 @@ export default function EntryEditor(props: Props) {
                         borderRadius: 8,
                         boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
                         ...(state.dropdownPosition === 'top'
-                          ? { bottom: '100%', marginBottom: 8 }
-                          : { top: '100%', marginTop: 4 })
+                          ? { bottom: window.innerHeight - state.dropdownRect.top + 8 }
+                          : { top: state.dropdownRect.top + state.dropdownRect.height + 4 })
                       }}>
                         {allEntries
                           .filter(e => e.id !== initial?.id && !state.refs.includes(e.id))
@@ -390,7 +392,8 @@ export default function EntryEditor(props: Props) {
                           <div style={{ padding: '16px', textAlign: 'center', fontSize: '0.85rem', color: theme.colors.textMuted }}>No matches found</div>
                         )}
                       </div>
-                    </>
+                    </>,
+                    document.body
                   )}
                 </div>
 

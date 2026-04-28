@@ -2,7 +2,7 @@
 
 import React, { useState, Suspense } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
-import { Button, Input } from '@/components/ui/Common'
+import { Button, Input, Kbd } from '@/components/ui/Common'
 import { SunMedium, Moon, Palette } from 'lucide-react'
 import { theme } from '@/lib/core/theme'
 import { useAppController, THEME_COLORS, AccentColor } from '@/hooks/useAppController'
@@ -10,6 +10,7 @@ import { useAppController, THEME_COLORS, AccentColor } from '@/hooks/useAppContr
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { state, refs, actions } = useAppController()
   const [showColorPicker, setShowColorPicker] = useState(false)
+  const [isSearchFocused, setIsSearchFocused] = useState(false)
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: theme.colors.background, color: theme.colors.text, overflow: 'hidden' }}>
@@ -38,17 +39,69 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             boxShadow: 'var(--shadow-sm)'
           }}
         >
-          <div style={{ maxWidth: 400, flex: 1, display: 'flex', gap: 16, alignItems: 'center' }}>
+          <div style={{ maxWidth: 400, flex: 1, position: 'relative' }}>
             <Input
               ref={refs.searchInputRef}
               value={state.search} onChange={(e: any) => actions.setSearch(e.target.value)}
               placeholder="Search in your knowledge repository..." fullWidth
               onFocus={() => {
-                if (!window.location.pathname.includes('entries')) {
-                  actions.goToView('entries')
+                setIsSearchFocused(true)
+                if (!window.location.pathname.includes('entry')) {
+                  actions.goToView('entry')
                 }
               }}
+              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
             />
+            
+            {/* Modern Search Help Popover */}
+            {isSearchFocused && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: 12,
+                  padding: '16px',
+                  borderRadius: 16,
+                  background: state.themeMode === 'dark' ? 'rgba(30, 31, 38, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+                  backdropFilter: 'blur(20px)',
+                  border: `1px solid ${theme.colors.border}`,
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+                  animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  zIndex: 1000,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12
+                }}
+              >
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: theme.colors.accent, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                  Advanced Search Filters
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 4, width: 80 }}>
+                    <Kbd>t:</Kbd>
+                    <span style={{ fontSize: '0.8rem', color: theme.colors.textMuted }}>or</span>
+                    <Kbd>title:</Kbd>
+                  </div>
+                  <span style={{ fontSize: '0.85rem', color: theme.colors.text }}>Search only by <strong style={{ color: theme.colors.accent }}>Title</strong></span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 4, width: 80 }}>
+                    <Kbd>#</Kbd>
+                    <span style={{ fontSize: '0.8rem', color: theme.colors.textMuted }}>or</span>
+                    <Kbd>tag:</Kbd>
+                  </div>
+                  <span style={{ fontSize: '0.85rem', color: theme.colors.text }}>Search only by <strong style={{ color: theme.colors.accent }}>Tags</strong></span>
+                </div>
+
+                <div style={{ marginTop: 4, paddingTop: 12, borderTop: `1px solid ${theme.colors.border}`, fontSize: '0.75rem', color: theme.colors.textDim, fontStyle: 'italic' }}>
+                  Press Enter to apply filters or just type to search globally.
+                </div>
+              </div>
+            )}
           </div>
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

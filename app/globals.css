@@ -155,3 +155,8 @@ button:active {
 .btn-action-animate:active {
   transform: scale(0.95);
 }
+
+.more-tags-trigger:hover .more-tags-tooltip {
+  display: flex !important;
+  animation: fadeIn 0.15s ease-out;
+}

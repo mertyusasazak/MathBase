@@ -80,12 +80,22 @@ export const EntriesView: React.FC<EntriesViewProps> = (props) => {
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {e.tags.slice(0, 2).map(t => <Badge key={t}>{t}</Badge>)}
           {e.tags.length > 2 && (
-            <span
-              title={e.tags.slice(2).join(', ')}
-              style={{ fontSize: '0.65rem', color: theme.colors.textMuted, alignSelf: 'center', padding: '2px 4px' }}
-            >
-              +{e.tags.length - 2} more
-            </span>
+            <div style={{ position: 'relative', display: 'flex' }} className="more-tags-trigger">
+              <span
+                style={{ fontSize: '0.65rem', color: theme.colors.textMuted, alignSelf: 'center', padding: '2px 4px', cursor: 'help' }}
+              >
+                +{e.tags.length - 2} more
+              </span>
+              <div className="more-tags-tooltip" style={{
+                position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+                background: theme.colors.surface, border: `1px solid ${theme.colors.border}`,
+                padding: '8px', borderRadius: 6, boxShadow: theme.shadows.lg,
+                zIndex: 100, display: 'none', gap: 4, flexWrap: 'wrap', width: 'max-content', maxWidth: 200,
+                marginBottom: 8
+              }}>
+                {e.tags.slice(2).map(t => <Badge key={t} style={{ fontSize: '0.6rem' }}>{t}</Badge>)}
+              </div>
+            </div>
           )}
         </div>
       )

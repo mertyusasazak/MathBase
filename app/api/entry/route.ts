@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 // POST /api/entry - Yeni entry oluştur
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { type, title, content, tags, refs, versionNote, sourceId, pageRange } = body
+  const { type, title, content, tags, refs, relationData, versionNote, sourceId, pageRange } = body
 
   if (!title || !type) {
     return NextResponse.json({ error: 'title and type are required' }, { status: 400 })
@@ -53,6 +53,20 @@ export async function POST(req: NextRequest) {
       pageRange: pageRange || '',
     }
   })
+
+  // Relation tablosuna kaydet
+  if (refs && Array.isArray(refs)) {
+    for (const refId of refs) {
+      await prisma.relation.create({
+        data: {
+          fromEntryId: entry.id,
+          toEntryId: refId,
+          relationType: relationData?.[refId] || 'related_to',
+          createdBy: 'user'
+        }
+      })
+    }
+  }
 
   // İlk versiyonu kaydet
   await prisma.entryVersion.create({

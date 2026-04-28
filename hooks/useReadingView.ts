@@ -19,45 +19,32 @@ export function useReadingView({
 }: ReadingViewLogicProps) {
   const [expandKeywords, setExpandKeywords] = useState(false)
 
+  // Inverse labels for incoming relations
+  const INVERSE_LABELS: Record<string, string> = {
+    uses: 'Used By',
+    example_of: 'Instances / Examples',
+    generalizes: 'Generalized By',
+    proof_depends_on: 'Proof Base for',
+    related_to: 'Related (Incoming)',
+    contrasts_with: 'Contrasted By'
+  }
+
   // Memoized relation processing
-  const { sections } = useMemo(() => {
-    const outgoing = relations.filter(r => r.fromEntryId === selected.id)
-    const incoming = relations.filter(r => r.toEntryId === selected.id)
+  const { outgoing, incoming } = useMemo(() => {
+    const rawOut = relations.filter(r => r.fromEntryId === selected.id)
+    const rawIn = relations.filter(r => r.toEntryId === selected.id)
     
-    const sections: { label: string; entries: { entry: Entry; rel: string }[] }[] = []
-
-    // Group outgoing by relation type
-    const outByType: Record<string, Entry[]> = {}
-    outgoing.forEach(r => {
+    const outgoing = rawOut.map(r => {
       const e = entries.find(x => x.id === r.toEntryId)
-      if (e) {
-        if (!outByType[r.relationType]) outByType[r.relationType] = []
-        outByType[r.relationType].push(e)
-      }
-    })
-    
-    Object.entries(outByType).forEach(([type, ents]) => {
-      sections.push({ 
-        label: RELATION_LABELS[type] || type.replace(/_/g, ' '), 
-        entries: ents.map(e => ({ entry: e, rel: type })) 
-      })
-    })
+      return e ? { entry: e, rel: RELATION_LABELS[r.relationType] || r.relationType } : null
+    }).filter(Boolean) as { entry: Entry; rel: string }[]
 
-    // Group incoming as "Used by"
-    const usedByMap = new Map<number, Entry>()
-    incoming.forEach(r => {
+    const incoming = rawIn.map(r => {
       const e = entries.find(x => x.id === r.fromEntryId)
-      if (e) usedByMap.set(e.id, e)
-    })
-    
-    if (usedByMap.size > 0) {
-      sections.push({ 
-        label: 'Used By', 
-        entries: Array.from(usedByMap.values()).map(e => ({ entry: e, rel: 'used_by' })) 
-      })
-    }
+      return e ? { entry: e, rel: INVERSE_LABELS[r.relationType] || r.relationType } : null
+    }).filter(Boolean) as { entry: Entry; rel: string }[]
 
-    return { sections }
+    return { outgoing, incoming }
   }, [selected.id, entries, relations])
 
   // Memoized navigation
@@ -72,7 +59,8 @@ export function useReadingView({
   return {
     state: {
       expandKeywords,
-      sections,
+      outgoing,
+      incoming,
       prevEntry,
       nextEntry
     },

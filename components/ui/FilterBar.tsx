@@ -5,6 +5,7 @@ import { Search, X, Check, Filter as FilterIcon, ChevronDown, ChevronUp } from '
 import { theme } from '@/lib/core/theme'
 import { Button, Input } from '@/components/ui/Common'
 import Card from '@/components/ui/Card'
+import { renderTitle } from '@/lib/core/math'
 
 export interface FilterColumn {
   id: string
@@ -208,9 +209,16 @@ export default function FilterBar({
                     }}>
                       {isSelected && <Check size={12} color={theme.colors.background} strokeWidth={3} />}
                     </div>
-                    <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {activeColumn.renderOption ? activeColumn.renderOption(opt) : (activeColumn.style === 'tag' ? `#${opt}` : opt)}
-                    </span>
+                    {activeColumn.renderOption ? (
+                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {activeColumn.renderOption(opt)}
+                      </span>
+                    ) : (
+                      <span 
+                        style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                        dangerouslySetInnerHTML={{ __html: activeColumn.style === 'tag' ? `#${opt}` : renderTitle(opt) }}
+                      />
+                    )}
                   </button>
                 )
               })

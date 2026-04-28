@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const id = parseInt(params.id)
   const body = await req.json()
-  const { type, title, content, tags, refs, versionNote, sourceId, pageRange, isDeleted, personalNotes } = body
+  const { type, title, content, tags, refs, relationData, versionNote, sourceId, pageRange, isDeleted, personalNotes } = body
 
   // Mevcut entry'i bul
   const existing = await prisma.entry.findUnique({ where: { id } })
@@ -60,7 +60,45 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
   })
 
+  // Relation senkronizasyonu
+  if (refs && Array.isArray(refs)) {
+    // Mevcut ilişkileri getir
+    const existingRelations = await prisma.relation.findMany({
+      where: { fromEntryId: id }
+    })
 
+    const existingToIds = existingRelations.map(r => r.toEntryId)
+
+    // Silinenler
+    const toDelete = existingRelations.filter(r => !refs.includes(r.toEntryId))
+    for (const r of toDelete) {
+      await prisma.relation.delete({ where: { id: r.id } })
+    }
+
+    // Eklenenler veya güncellenenler
+    for (const refId of refs) {
+      const relType = relationData?.[refId] || 'related_to'
+      const existingRel = existingRelations.find(r => r.toEntryId === refId)
+
+      if (existingRel) {
+        if (existingRel.relationType !== relType) {
+          await prisma.relation.update({
+            where: { id: existingRel.id },
+            data: { relationType: relType }
+          })
+        }
+      } else {
+        await prisma.relation.create({
+          data: {
+            fromEntryId: id,
+            toEntryId: refId,
+            relationType: relType,
+            createdBy: 'user'
+          }
+        })
+      }
+    }
+  }
 
   // Re-extract keywords
   const symbolKeywords = extractKeywords((title || existing.title) + ' ' + (content || existing.content))

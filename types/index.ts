@@ -14,6 +14,7 @@ export interface Entry {
   pageRange?: string; 
   symbolKeywords?: string[];
   personalNotes?: string;
+  relationData?: Record<number, string>;
   _backlinkIds?: number[];
 }
 

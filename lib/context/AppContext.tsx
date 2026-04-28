@@ -184,12 +184,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const filtered = entries.filter(e => {
     if (search.trim()) {
       const q = search.toLowerCase()
-      const match =
-        e.title.toLowerCase().includes(q) ||
-        e.content.toLowerCase().includes(q) ||
-        e.tags.some(t => t.toLowerCase().includes(q)) ||
-        e.type.toLowerCase().includes(q) ||
-        e.symbolKeywords?.some(k => k.toLowerCase().includes(q))
+      let match = false
+      
+      if (q.startsWith('t:') || q.startsWith('title:')) {
+        const query = q.startsWith('t:') ? q.slice(2).trim() : q.slice(6).trim()
+        match = e.title.toLowerCase().includes(query)
+      } else if (q.startsWith('#') || q.startsWith('tag:')) {
+        const query = q.startsWith('#') ? q.slice(1).trim() : q.slice(4).trim()
+        match = e.tags.some(t => t.toLowerCase().includes(query))
+      } else {
+        match =
+          e.title.toLowerCase().includes(q) ||
+          e.content.toLowerCase().includes(q) ||
+          e.tags.some(t => t.toLowerCase().includes(q)) ||
+          e.type.toLowerCase().includes(q) ||
+          e.symbolKeywords?.some(k => k.toLowerCase().includes(q))
+      }
 
       if (!match) return false
     }

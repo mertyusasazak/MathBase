@@ -20,12 +20,20 @@ export function Badge({
   const getVariantStyles = (): React.CSSProperties => {
     switch (variant) {
       case 'solid':
-        return { background: `${color}15`, color: color, border: `1px solid ${color}44` }
+        return { 
+          background: color.includes('var') ? `color-mix(in srgb, ${color}, transparent 85%)` : `${color}15`, 
+          color: color, 
+          border: `1px solid ${color.includes('var') ? `color-mix(in srgb, ${color}, transparent 70%)` : `${color}44`}` 
+        }
       case 'outline':
         return { background: 'transparent', color: color, border: `1px solid ${color}` }
       case 'muted':
       default:
-        return { background: `${color}15`, color: color, border: `1px solid ${color}33` }
+        return { 
+          background: color.includes('var') ? `color-mix(in srgb, ${color}, transparent 85%)` : `${color}15`, 
+          color: color, 
+          border: `1px solid ${color.includes('var') ? `color-mix(in srgb, ${color}, transparent 80%)` : `${color}33`}` 
+        }
     }
   }
 
@@ -48,6 +56,27 @@ export function Badge({
     <span style={baseStyle} {...props}>
       {children}
     </span>
+  )
+}
+
+/* ──── KBD ──── */
+export function Kbd({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <kbd style={{
+      background: 'rgba(255,255,255,0.1)',
+      border: '1px solid rgba(255,255,255,0.2)',
+      borderRadius: 4,
+      padding: '2px 6px',
+      fontSize: '0.7rem',
+      fontFamily: theme.typography.sans,
+      fontWeight: 700,
+      color: theme.colors.accent,
+      boxShadow: '0 1px 0 rgba(0,0,0,0.2)',
+      margin: '0 2px',
+      ...style
+    }}>
+      {children}
+    </kbd>
   )
 }
 

@@ -8,7 +8,7 @@ import FilterBar from '@/components/ui/FilterBar'
 import { theme } from '@/lib/core/theme'
 import { renderTitle } from '@/lib/core/math'
 import { DeletedItem } from '@/types'
-import { TYPE_COLORS } from '@/lib/core/constants'
+import { TYPE_COLORS, SOURCE_TYPE_COLORS } from '@/lib/core/constants'
 import { DataTable, Column } from '@/components/ui/DataTable'
 
 interface DeletedItemsViewProps {
@@ -62,7 +62,9 @@ export const DeletedItemsView: React.FC<DeletedItemsViewProps> = (props) => {
       sortable: true,
       render: (e) => {
         const displayType = e.deletedItemType === 'source' ? (e.sourceType || 'PDF').toUpperCase() : (e.type || 'entry')
-        const typeColor = e.deletedItemType === 'source' ? theme.colors.accent : (TYPE_COLORS[e.type!] || theme.colors.textMuted)
+        const typeColor = e.deletedItemType === 'source' 
+          ? (SOURCE_TYPE_COLORS[e.sourceType!] || theme.colors.accent) 
+          : (TYPE_COLORS[e.type!] || theme.colors.textMuted)
         return <Badge variant="solid" color={typeColor}>{displayType}</Badge>
       }
     },

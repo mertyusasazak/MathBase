@@ -47,6 +47,7 @@ export function useEntryEditor({
   const [activeRelType, setActiveRelType] = useState('uses')
   const [isRefSearchOpen, setIsRefSearchOpen] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>('bottom')
+  const [dropdownRect, setDropdownRect] = useState<{ top: number, left: number, width: number, height: number } | null>(null)
   const searchContainerRef = useRef<HTMLDivElement>(null)
   
   // Layout state
@@ -106,10 +107,17 @@ export function useEntryEditor({
     }
   }, [isResizing])
 
-  // Smart dropdown flip logic
+  // Smart dropdown flip logic and position tracking
   useEffect(() => {
     if (isRefSearchOpen && searchContainerRef.current) {
       const rect = searchContainerRef.current.getBoundingClientRect()
+      setDropdownRect({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height
+      })
+      
       const spaceBelow = window.innerHeight - rect.bottom
       const spaceAbove = rect.top
 
@@ -118,6 +126,8 @@ export function useEntryEditor({
       } else {
         setDropdownPosition('bottom')
       }
+    } else {
+      setDropdownRect(null)
     }
   }, [isRefSearchOpen])
 
@@ -132,31 +142,12 @@ export function useEntryEditor({
           content,
           tags: tags.split(',').map(t => t.trim()).filter(Boolean),
           refs,
+          relationData: refRelations, // Pass relationship types to backend
           sourceId: sourceId || null,
           pageRange,
         },
         versionNote || undefined
       )
-
-      if (initial?.id) {
-        for (const refId of refs) {
-          const relType = refRelations[refId] || 'related_to'
-          const existingRel = initialRelations?.find(r => r.toEntryId === refId)
-          if (existingRel && existingRel.relationType === relType) continue
-
-          try {
-            await fetch('/api/relations', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                fromEntryId: initial.id,
-                toEntryId: refId,
-                relationType: relType,
-              })
-            })
-          } catch { /* ignore */ }
-        }
-      }
     } finally {
       setSaving(false)
     }
@@ -166,7 +157,7 @@ export function useEntryEditor({
     state: {
       type, title, content, tags, sourceId, pageRange,
       refs, refRelations, saving,
-      refSearch, activeRelType, isRefSearchOpen, dropdownPosition,
+      refSearch, activeRelType, isRefSearchOpen, dropdownPosition, dropdownRect,
       leftWidth, isResizing, duplicates, versionNote, openSections
     },
     refs: {

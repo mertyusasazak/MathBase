@@ -159,7 +159,7 @@ export default function Sidebar({
           <NavButton active={activeView === 'entry'} onClick={() => goToView('entry')} icon={<Library size={18} />} label="Library" sidebarOpen={sidebarOpen} />
           <NavButton active={activeView === 'graph'} onClick={() => goToView('graph')} icon={<Network size={18} />} label="Graph View" sidebarOpen={sidebarOpen} />
           <NavButton active={activeView === 'sources'} onClick={() => goToView('sources')} icon={<BookOpen size={18} />} label="Sources" sidebarOpen={sidebarOpen} />
-          <NavButton active={activeView === 'deleted'} onClick={() => goToView('deleted')} icon={<Trash2 size={18} />} label="Trash" sidebarOpen={sidebarOpen} count={deletedEntries.length} isRed />
+          <NavButton active={activeView === 'deleted'} onClick={() => goToView('deleted')} icon={<Trash2 size={18} />} label="Trash Bin" sidebarOpen={sidebarOpen} count={deletedEntries.length} isRed />
         </div>
 
         {/* Footer Actions */}

@@ -45,13 +45,31 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
   // --- Notes Panel Implementation ---
   const [localNotes, setLocalNotes] = React.useState(selected.personalNotes || '')
   const [saveStatus, setSaveStatus] = React.useState<'saved' | 'saving' | 'error'>('saved')
+  const [isEditingNotes, setIsEditingNotes] = React.useState(false)
   const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+  const notesSidebarRef = React.useRef<HTMLDivElement>(null)
 
   // Sync local state if entry changes
   React.useEffect(() => {
     setLocalNotes(selected.personalNotes || '')
     setSaveStatus('saved')
+    setIsEditingNotes(false)
   }, [selected.id])
+
+  // Handle click outside to auto-preview
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notesSidebarRef.current && !notesSidebarRef.current.contains(event.target as Node)) {
+        setIsEditingNotes(false)
+      }
+    }
+    if (isEditingNotes) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isEditingNotes])
 
   const handleNotesChange = (val: string) => {
     setLocalNotes(val)
@@ -326,7 +344,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
             <MathRenderer content={selected.content} />
           </div>
 
-          {state.sections.length > 0 && (
+          {(state.outgoing.length > 0 || state.incoming.length > 0) && (
             <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: 24 }}>
               <div style={{
                 fontFamily: 'Instrument Sans, sans-serif',
@@ -334,47 +352,68 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
                 color: theme.colors.textMuted,
-                marginBottom: 16,
+                marginBottom: 20,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6
               }}>
                 <Link2 size={14} /> Relationships
               </div>
-              <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 8, display: 'flex', flexDirection: 'column', gap: 20 }}>
-                {state.sections.map((sec: any) => (
-                  <div key={sec.label}>
-                    <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.75rem', color: theme.colors.accent, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{sec.label}</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
-                      {sec.entries.map(({ entry: e }: { entry: Entry }) => (
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                {/* OUTGOING SECTION */}
+                {state.outgoing.length > 0 && (
+                  <div>
+                    <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.7rem', color: theme.colors.textMuted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      Outgoing Relations <span style={{ opacity: 0.3 }}>—</span> <span style={{ color: theme.colors.accent }}>References</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                      {state.outgoing.map(({ entry: e, rel }: { entry: Entry, rel: string }) => (
                         <button key={e.id} onClick={() => onSelectEntry(e)} className="glow-card" style={{
-                          padding: '8px 12px',
-                          borderRadius: 8,
-                          border: `1px solid ${theme.colors.border}`,
-                          background: theme.colors.surface,
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          display: 'flex',
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 12
+                          padding: '10px 14px', borderRadius: 10, border: `1px solid ${theme.colors.border}`,
+                          background: theme.colors.surface, cursor: 'pointer', textAlign: 'left',
+                          display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12
                         }}>
-                          <span style={{
-                            color: TYPE_COLORS[e.type],
-                            fontSize: '0.65rem',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            padding: '2px 6px',
-                            background: `${TYPE_COLORS[e.type]}15`,
-                            borderRadius: 4,
-                            whiteSpace: 'nowrap'
-                          }}>{e.type}</span>
-                          <span style={{ fontFamily: 'EB Garamond, serif', fontSize: '1.05rem', color: theme.colors.text, lineHeight: 1.2, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dangerouslySetInnerHTML={{ __html: renderTitle(e.title) }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <Badge variant="solid" color={TYPE_COLORS[e.type]} style={{ fontSize: '0.55rem', padding: '1px 5px' }}>{e.type}</Badge>
+                              <span style={{ fontSize: '0.6rem', color: theme.colors.accent, fontWeight: 700, textTransform: 'uppercase' }}>{rel}</span>
+                            </div>
+                            <span style={{ fontFamily: 'EB Garamond, serif', fontSize: '1.1rem', color: theme.colors.text, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dangerouslySetInnerHTML={{ __html: renderTitle(e.title) }} />
+                          </div>
+                          <ChevronRight size={14} color={theme.colors.textMuted} />
                         </button>
                       ))}
                     </div>
                   </div>
-                ))}
+                )}
+
+                {/* INCOMING SECTION */}
+                {state.incoming.length > 0 && (
+                  <div>
+                    <div style={{ fontFamily: 'Instrument Sans', fontSize: '0.7rem', color: theme.colors.textMuted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      Incoming Relations <span style={{ opacity: 0.3 }}>—</span> <span style={{ color: theme.colors.accent }}>Referenced By</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                      {state.incoming.map(({ entry: e, rel }: { entry: Entry, rel: string }) => (
+                        <button key={e.id} onClick={() => onSelectEntry(e)} className="glow-card" style={{
+                          padding: '10px 14px', borderRadius: 10, border: `1px solid ${theme.colors.border}`,
+                          background: theme.colors.surface, cursor: 'pointer', textAlign: 'left',
+                          display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12
+                        }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <Badge variant="solid" color={TYPE_COLORS[e.type]} style={{ fontSize: '0.55rem', padding: '1px 5px' }}>{e.type}</Badge>
+                              <span style={{ fontSize: '0.6rem', color: theme.colors.accent, fontWeight: 700, textTransform: 'uppercase' }}>{rel}</span>
+                            </div>
+                            <span style={{ fontFamily: 'EB Garamond, serif', fontSize: '1.1rem', color: theme.colors.text, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dangerouslySetInnerHTML={{ __html: renderTitle(e.title) }} />
+                          </div>
+                          <ChevronRight size={14} color={theme.colors.textMuted} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -414,14 +453,17 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
       </div>
 
       {/* NOTES SIDEBAR */}
-      <div style={{
-        width: 320,
-        borderLeft: `1px solid ${theme.colors.border}`,
-        background: theme.colors.surface,
-        display: 'flex',
-        flexDirection: 'column',
-        animation: 'slideInRight 0.3s ease-out'
-      }}>
+      <div 
+        ref={notesSidebarRef}
+        style={{
+          width: 340,
+          borderLeft: `1px solid ${theme.colors.border}`,
+          background: theme.colors.surface,
+          display: 'flex',
+          flexDirection: 'column',
+          animation: 'slideInRight 0.3s ease-out'
+        }}
+      >
         <div style={{
           padding: '16px 20px',
           borderBottom: `1px solid ${theme.colors.border}`,
@@ -431,43 +473,58 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: theme.colors.accent }}>
             <StickyNote size={18} />
-            <span style={{ fontFamily: theme.typography.sans, fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Personal Notes</span>
+            <span style={{ fontFamily: theme.typography.sans, fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Notes</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {saveStatus === 'saving' && (
-              <span style={{ fontSize: '0.7rem', color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <RotateCcw size={10} className="spin" /> Saving...
-              </span>
-            )}
-            {saveStatus === 'saved' && (
-              <span style={{ fontSize: '0.7rem', color: theme.colors.success, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <CheckCircle2 size={10} /> Saved
-              </span>
-            )}
-            {saveStatus === 'error' && (
-              <span style={{ fontSize: '0.7rem', color: theme.colors.danger }}>Error saving</span>
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {saveStatus === 'saving' && <RotateCcw size={12} className="spin" color={theme.colors.textMuted} />}
+            {saveStatus === 'saved' && <CheckCircle2 size={12} color={theme.colors.success} />}
+            <Button 
+              variant={isEditingNotes ? "gold" : "outline"} 
+              size="sm" 
+              onClick={() => setIsEditingNotes(!isEditingNotes)}
+              style={{ fontSize: '0.65rem', padding: '2px 8px' }}
+            >
+              {isEditingNotes ? 'Preview' : 'Edit'}
+            </Button>
           </div>
         </div>
 
-        <textarea
-          value={localNotes}
-          onChange={(e) => handleNotesChange(e.target.value)}
-          placeholder="Jot down your proof sketches, examples, or reminders here..."
-          style={{
-            flex: 1,
-            background: 'transparent',
-            border: 'none',
-            padding: '20px',
-            fontFamily: theme.typography.sans,
-            fontSize: '0.9rem',
-            lineHeight: 1.6,
-            color: theme.colors.text,
-            resize: 'none',
-            outline: 'none',
-            caretColor: theme.colors.accent
-          }}
-        />
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          {isEditingNotes ? (
+            <textarea
+              value={localNotes}
+              onChange={(e) => handleNotesChange(e.target.value)}
+              placeholder="Jot down your proof sketches, examples, or reminders here..."
+              autoFocus
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                padding: '20px',
+                fontFamily: theme.typography.mono,
+                fontSize: '0.85rem',
+                lineHeight: 1.6,
+                color: theme.colors.text,
+                resize: 'none',
+                outline: 'none',
+                caretColor: theme.colors.accent
+              }}
+            />
+          ) : (
+            <div 
+              onClick={() => setIsEditingNotes(true)}
+              style={{ padding: '20px', cursor: 'text', minHeight: '100%' }}
+            >
+              {localNotes ? (
+                <MathRenderer content={localNotes} style={{ fontSize: '0.95rem', lineHeight: 1.6 }} />
+              ) : (
+                <div style={{ color: theme.colors.textMuted, fontSize: '0.85rem', fontStyle: 'italic' }}>
+                  No notes yet. Click to start writing...
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         <div style={{
           padding: '12px 20px',
@@ -476,7 +533,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
           borderTop: `1px solid ${theme.colors.border}`,
           background: `${theme.colors.background}55`
         }}>
-          Notes are automatically saved to this entry.
+          Notes are automatically saved.
         </div>
       </div>
     </div>
