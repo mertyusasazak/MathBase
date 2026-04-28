@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, X, Save, BookOpen, Eye, Filter } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Save, BookOpen, Eye, Filter, ArrowUp } from 'lucide-react'
 import { Button, Input, Select, Badge } from '@/components/ui/Common'
 import Pagination from '@/components/ui/Pagination'
 import { theme } from '@/lib/core/theme'
@@ -29,6 +29,17 @@ export default function SourcesView({ sources, onReload }: Props) {
   const [showFilter, setShowFilter] = useState(false)
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set())
   const [activeTitles, setActiveTitles] = useState<Set<string>>(new Set())
+
+  const [showScrollTop, setShowScrollTop] = useState(false)
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setShowScrollTop(e.currentTarget.scrollTop > 300)
+  }
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const filteredSources = sources.filter(s => {
     if (activeTypes.size > 0 && !activeTypes.has(s.sourceType)) return false
@@ -155,7 +166,11 @@ export default function SourcesView({ sources, onReload }: Props) {
   ]
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '40px 60px' }}>
+    <div
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      style={{ flex: 1, overflowY: 'auto', padding: '40px 60px', position: 'relative' }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h2 style={{ fontFamily: theme.typography.serif, fontSize: '2.5rem', color: theme.colors.accent, fontWeight: 400, margin: 0, display: 'flex', alignItems: 'center' }}>
           <BookOpen size={32} style={{ marginRight: 16 }} />
@@ -244,6 +259,34 @@ export default function SourcesView({ sources, onReload }: Props) {
         </div>
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
       </div>
+
+      {/* BACK TO TOP BUTTON */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          style={{
+            position: 'fixed',
+            bottom: 40,
+            right: 40,
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            background: theme.colors.accent,
+            color: theme.colors.background,
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: `0 10px 40px ${theme.colors.accent}66`,
+            zIndex: 1000,
+            animation: 'fadeIn 0.3s ease-out'
+          }}
+          className="btn-action-animate"
+        >
+          <ArrowUp size={24} strokeWidth={2.5} />
+        </button>
+      )}
     </div>
   )
 }

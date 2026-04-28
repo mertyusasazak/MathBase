@@ -2,7 +2,7 @@
 
 import React from 'react'
 import {
-  ArrowLeft, FileText, Pencil, ChevronLeft, ChevronRight, Key, BookOpen, ArrowRight, Link2, StickyNote, CheckCircle2, RotateCcw
+  ArrowLeft, FileText, Pencil, ChevronLeft, ChevronRight, Key, BookOpen, ArrowRight, Link2, StickyNote, CheckCircle2, RotateCcw, ArrowUp
 } from 'lucide-react'
 import { Button, Badge } from '@/components/ui/Common'
 import { theme } from '@/lib/core/theme'
@@ -99,10 +99,24 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
   const src = sources.find(s => s.id === selected.sourceId)
 
   const [showExportMenu, setShowExportMenu] = React.useState(false)
+  const [showScrollTop, setShowScrollTop] = React.useState(false)
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setShowScrollTop(e.currentTarget.scrollTop > 300)
+  }
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        style={{ flex: 1, overflowY: 'auto', position: 'relative' }}
+      >
         {/* HEADER */}
         <div style={{
           position: 'sticky',
@@ -304,7 +318,13 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
 
           {src && (
             <div
-              onClick={() => src.filepath && window.open(src.filepath, '_blank')}
+              onClick={() => {
+                if (!src.filepath) return
+                const url = src.filepath.startsWith('http') 
+                  ? src.filepath 
+                  : `${window.location.origin}/${src.filepath.replace(/^\/+/, '')}`
+                window.open(url, '_blank')
+              }}
               className={src.filepath ? "glow-card" : ""}
               style={{
                 marginBottom: 20,
@@ -451,6 +471,35 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* BACK TO TOP BUTTON */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          style={{
+            position: 'fixed',
+            bottom: 40,
+            right: 380, // Offset for the permanent 340px notes sidebar + 40px margin
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            background: theme.colors.accent,
+            color: theme.colors.background,
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: `0 10px 40px ${theme.colors.accent}66`,
+            zIndex: 1000,
+            animation: 'fadeIn 0.3s ease-out',
+            transition: 'right 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+          className="btn-action-animate"
+        >
+          <ArrowUp size={24} strokeWidth={2.5} />
+        </button>
+      )}
 
       {/* NOTES SIDEBAR */}
       <div 

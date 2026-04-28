@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'title and type are required' }, { status: 400 })
   }
 
-  // Auto-extract keywords
-  const symbolKeywords = extractKeywords(title + ' ' + (content || ''))
+  // Use manual keywords if provided, otherwise auto-extract
+  const finalKeywords = body.manualKeywords || extractKeywords(title + ' ' + (content || ''))
 
   const entry = await prisma.entry.create({
     data: {
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       content: content || '',
       tags: JSON.stringify(tags || []),
       refs: JSON.stringify(refs || []),
-      symbolKeywords: JSON.stringify(symbolKeywords),
+      symbolKeywords: JSON.stringify(finalKeywords),
       versionNote: versionNote || 'Initial version',
       sourceId: sourceId || null,
       pageRange: pageRange || '',

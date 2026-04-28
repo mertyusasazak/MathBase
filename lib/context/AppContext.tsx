@@ -40,9 +40,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       pathname === '/graph' ? 'graph' :
         pathname === '/sources' ? 'sources' :
           pathname === '/trash' ? 'deleted' :
-    pathname.startsWith('/entry') ? 'entry' :
-      pathname === '/new' ? 'entry' :
-        pathname.startsWith('/edit') ? 'entry' : 'dashboard'
+            pathname === '/import' ? 'import' :
+              pathname.startsWith('/entry') ? 'entry' :
+                pathname === '/new' ? 'entry' :
+                  pathname.startsWith('/edit') ? 'entry' : 'dashboard'
 
   const [selected, setSelected] = useState<Entry | null>(null)
   const [mode, setMode] = useState<'view' | 'edit' | 'new'>('view')
@@ -100,8 +101,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const goToView = useCallback((view: string) => {
-    if (view === 'dashboard' || view === 'entry' || view === 'graph' || view === 'sources' || view === 'deleted') {
-      router.push(`/${view === 'deleted' ? 'trash' : view}`)
+    if (view === 'dashboard' || view === 'entry' || view === 'graph' || view === 'sources' || view === 'deleted' || view === 'import') {
+      const route = view === 'deleted' ? 'trash' : view
+      router.push(`/${route}`)
     } else {
       router.push(`/${view}`)
     }

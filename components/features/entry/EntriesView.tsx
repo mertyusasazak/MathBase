@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Pencil, Trash2, Library, Filter } from 'lucide-react'
+import { Pencil, Trash2, Library, Filter, ArrowUp } from 'lucide-react'
 import { Button, Badge, Select } from '@/components/ui/Common'
 import Pagination from '@/components/ui/Pagination'
 import FilterBar from '@/components/ui/FilterBar'
@@ -51,6 +51,17 @@ export const EntriesView: React.FC<EntriesViewProps> = (props) => {
   const allTags = [...new Set(entries.flatMap(e => e.tags))].sort()
   const allTitles = [...new Set(entries.map(e => e.title))].sort()
   const ENTRY_TYPES = ['definition', 'theorem', 'lemma', 'corollary', 'example', 'remark']
+
+  const [showScrollTop, setShowScrollTop] = React.useState(false)
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setShowScrollTop(e.currentTarget.scrollTop > 300)
+  }
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const columns: Column<Entry>[] = [
     {
@@ -132,7 +143,11 @@ export const EntriesView: React.FC<EntriesViewProps> = (props) => {
   ]
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '40px 60px' }}>
+    <div 
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      style={{ flex: 1, overflowY: 'auto', padding: '40px 60px', position: 'relative' }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h2 style={{ fontFamily: theme.typography.serif, fontSize: '2.5rem', color: theme.colors.accent, fontWeight: 400, margin: 0, display: 'flex', alignItems: 'center' }}>
           <Library size={32} style={{ marginRight: 16 }} />
@@ -171,25 +186,53 @@ export const EntriesView: React.FC<EntriesViewProps> = (props) => {
       />
 
       <DataTable
-        data={paginated}
         columns={columns}
+        data={paginated}
         loading={loading}
+        onRowClick={onSelectEntry}
+        sortConfig={sortConfig}
+        onSort={onSort}
         selectedIds={selectedIds}
         onSelectIds={(ids: any) => setSelectedIds(ids)}
         getRowId={(e) => e.id}
-        sortConfig={sortConfig}
-        onSort={onSort}
-        onRowClick={onSelectEntry}
       />
+
+      {/* BACK TO TOP BUTTON */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          style={{
+            position: 'fixed',
+            bottom: 40,
+            right: 40,
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            background: theme.colors.accent,
+            color: theme.colors.background,
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: `0 10px 40px ${theme.colors.accent}66`,
+            zIndex: 1000,
+            animation: 'fadeIn 0.3s ease-out'
+          }}
+          className="btn-action-animate"
+        >
+          <ArrowUp size={24} strokeWidth={2.5} />
+        </button>
+      )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: '0.8rem', color: theme.colors.textMuted, fontWeight: 500 }}>Records per page:</span>
           <div style={{ width: 68 }}>
-            <Select 
-              value={itemsPerPage} 
-              onChange={(e) => setItemsPerPage(Number(e.target.value))} 
-              options={[{ value: 10, label: '10' }, { value: 25, label: '25' }, { value: 50, label: '50' }, { value: 100, label: '100' }]} 
+            <Select
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              options={[{ value: 10, label: '10' }, { value: 25, label: '25' }, { value: 50, label: '50' }, { value: 100, label: '100' }]}
               style={{ padding: '4px 28px 4px 10px', fontSize: '0.8rem', height: 'auto' }}
             />
           </div>

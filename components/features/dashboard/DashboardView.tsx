@@ -3,6 +3,7 @@
 import React from 'react'
 import Card from '@/components/ui/Card'
 import { Button, Badge } from '@/components/ui/Common'
+import { ArrowUp } from 'lucide-react'
 import { theme } from '@/lib/core/theme'
 import { renderTitle } from '@/lib/core/math'
 import { Entry, Source } from '@/types'
@@ -36,17 +37,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     { label: 'Sources', value: sources.length }
   ]
 
+  const [showScrollTop, setShowScrollTop] = React.useState(false)
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setShowScrollTop(e.currentTarget.scrollTop > 300)
+  }
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
-    <div style={{
-      flex: 1,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'column',
-      gap: 32,
-      padding: '40px 60px',
-      overflowY: 'auto'
-    }}>
+    <div 
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-start', // Changed to flex-start for better scroll behavior
+        flexDirection: 'column',
+        gap: 32,
+        padding: '40px 60px',
+        overflowY: 'auto',
+        position: 'relative'
+      }}
+    >
       <div style={{ textAlign: 'center' }}>
         <div style={{
           fontFamily: 'EB Garamond, serif',
@@ -177,6 +194,34 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         >
           + Create your first entry
         </Button>
+      )}
+
+      {/* BACK TO TOP BUTTON */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          style={{
+            position: 'fixed',
+            bottom: 40,
+            right: 40,
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            background: theme.colors.accent,
+            color: theme.colors.background,
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: `0 10px 40px ${theme.colors.accent}66`,
+            zIndex: 1000,
+            animation: 'fadeIn 0.3s ease-out'
+          }}
+          className="btn-action-animate"
+        >
+          <ArrowUp size={24} strokeWidth={2.5} />
+        </button>
       )}
     </div>
   )
