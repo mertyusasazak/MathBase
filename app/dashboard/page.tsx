@@ -10,6 +10,7 @@ export default function DashboardPage() {
     <DashboardView 
       entries={state.entries} 
       sources={state.sources} 
+      relations={state.relations}
       onSelectEntry={actions.selectEntry} 
       onCreateEntry={() => actions.goToView('new')} 
     />

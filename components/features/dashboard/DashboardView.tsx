@@ -14,6 +14,7 @@ import { useAppContext, THEME_COLORS } from '@/lib/context/AppContext'
 interface DashboardViewProps {
   entries: Entry[]
   sources: Source[]
+  relations: any[]
   onSelectEntry: (entry: Entry) => void
   onCreateEntry: () => void
 }
@@ -21,20 +22,20 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({
   entries,
   sources,
+  relations,
   onSelectEntry,
   onCreateEntry
 }) => {
   const { state: { accentColor, themeMode } } = useAppContext()
-  
+
   const recentEntries = [...entries]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5)
 
   const stats = [
-    { label: 'Entry', value: entries.length },
-    { label: 'Definitions', value: entries.filter(e => e.type === 'definition').length },
-    { label: 'Theorems', value: entries.filter(e => e.type === 'theorem').length },
-    { label: 'Sources', value: sources.length }
+    { label: 'Entries', value: entries.length, type: 'entries' },
+    { label: 'Sources', value: sources.length, type: 'sources' },
+    { label: 'Relations', value: relations.length, type: 'relations' }
   ]
 
   const [showScrollTop, setShowScrollTop] = React.useState(false)
@@ -49,7 +50,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }
 
   return (
-    <div 
+    <div
       ref={scrollContainerRef}
       onScroll={handleScroll}
       style={{
@@ -94,29 +95,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center' }}>
         {stats.map(stat => {
-          const typeKey = stat.label.toLowerCase().includes('source') ? 'source' : 
-                         stat.label.toLowerCase().includes('theorem') ? 'theorem' :
-                         stat.label.toLowerCase().includes('definition') ? 'definition' : 'accent';
-          
+          const typeKey = stat.type;
+
           let hex = '';
-          if (typeKey === 'accent') {
+          if (typeKey === 'entries') {
             const colors = THEME_COLORS[accentColor as keyof typeof THEME_COLORS];
             hex = themeMode === 'dark' ? colors.dark : colors.light;
-          } else if (typeKey === 'source') {
-            hex = '#06b6d4'; // Base source cyan
+          } else if (typeKey === 'sources') {
+            hex = '#06b6d4'; // Cyan for sources
           } else {
-            hex = (TYPE_COLORS as any)[typeKey];
+            hex = '#a855f7'; // Purple for relations
           }
-          
+
           const bgColor = `${hex}08`;
           const borderColor = `${hex}33`;
-          
+
           return (
-            <Card 
-              key={stat.label} 
-              style={{ 
-                textAlign: 'center', 
-                padding: '24px 32px', 
+            <Card
+              key={stat.label}
+              style={{
+                textAlign: 'center',
+                padding: '24px 32px',
                 minWidth: 140,
                 background: bgColor,
                 border: `1px solid ${borderColor}`,
@@ -194,34 +193,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         >
           + Create your first entry
         </Button>
-      )}
-
-      {/* BACK TO TOP BUTTON */}
-      {showScrollTop && (
-        <button
-          onClick={scrollToTop}
-          style={{
-            position: 'fixed',
-            bottom: 40,
-            right: 40,
-            width: 56,
-            height: 56,
-            borderRadius: '50%',
-            background: theme.colors.accent,
-            color: theme.colors.background,
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: `0 10px 40px ${theme.colors.accent}66`,
-            zIndex: 1000,
-            animation: 'fadeIn 0.3s ease-out'
-          }}
-          className="btn-action-animate"
-        >
-          <ArrowUp size={24} strokeWidth={2.5} />
-        </button>
       )}
     </div>
   )

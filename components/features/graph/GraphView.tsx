@@ -6,6 +6,7 @@ import * as d3 from 'd3'
 import { Entry, Relation } from '@/types'
 import { theme } from '@/lib/core/theme'
 import { RELATION_LABELS, INVERSE_RELATION_LABELS } from '@/lib/core/constants'
+import { useAppContext } from '@/lib/context/AppContext'
 
 
 interface Props {
@@ -35,26 +36,36 @@ const RELATION_COLORS: Record<string, string> = {
 
 const ALL_RELATION_TYPES = Object.keys(RELATION_COLORS)
 
-const savedPositions: Record<number, { x: number; y: number }> = {}
-let savedTransform: { k: number; x: number; y: number } | null = null
-
 export default function GraphView({ entries, selectedId, onSelect, relations = [] }: Props) {
+  const { state: appState, actions: appActions } = useAppContext()
+  const { 
+    graphHiddenTypes: hiddenTypes, 
+    graphActiveIncoming: activeIncoming, 
+    graphActiveOutgoing: activeOutgoing,
+    graphPositions: savedPositions,
+    graphTransform: savedTransform
+  } = appState
+  const {
+    setGraphHiddenTypes: setHiddenTypes,
+    setGraphActiveIncoming: setActiveIncoming,
+    setGraphActiveOutgoing: setActiveOutgoing,
+    setGraphPositions: setSavedPositions,
+    setGraphTransform: setSavedTransform
+  } = appActions
+
   const svgRef = useRef<SVGSVGElement>(null)
   const [resetKey, setResetKey] = useState(0)
-  const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set())
-  const [activeIncoming, setActiveIncoming] = useState<Set<string>>(new Set(ALL_RELATION_TYPES))
-  const [activeOutgoing, setActiveOutgoing] = useState<Set<string>>(new Set())
   const [hoveredNode, setHoveredNode] = useState<any>(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
 
   const handleReset = useCallback(() => {
-    Object.keys(savedPositions).forEach(k => delete savedPositions[parseInt(k)])
-    savedTransform = null
+    setSavedPositions({})
+    setSavedTransform(null)
     setHiddenTypes(new Set())
-    setActiveIncoming(new Set(ALL_RELATION_TYPES))
+    setActiveIncoming(new Set(Object.keys(RELATION_COLORS)))
     setActiveOutgoing(new Set())
     setResetKey(k => k + 1)
-  }, [])
+  }, [setSavedPositions, setSavedTransform, setHiddenTypes, setActiveIncoming, setActiveOutgoing])
 
   const toggleType = (type: string) => {
     setHiddenTypes(prev => {
@@ -98,9 +109,9 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
         // If node selected, only show edges that are "active" in their respective direction
         if (r.fromEntryId === selectedId) return activeOutgoing.has(r.relationType)
         if (r.toEntryId === selectedId) return activeIncoming.has(r.relationType)
-        
+
         // Hide relations not connected to the selected node for focus
-        return false 
+        return false
       } else {
         // If no node selected, hide only if type is inactive in BOTH columns (since each represents a direction)
         // or effectively, if it's "selected" in either, it shows? 
@@ -135,14 +146,36 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
       y: savedPositions[e.id]?.y ?? height / 2 + (Math.random() - 0.5) * 200,
     }))
 
-    // Build links exclusively from the relations table
-    const links = filteredRelations
+    // 1. Links from explicit Relation table
+    const explicitLinks = filteredRelations
       .filter(r => nodes.find(x => x.id === r.fromEntryId) && nodes.find(x => x.id === r.toEntryId))
       .map(r => ({
         source: r.fromEntryId,
         target: r.toEntryId,
         relationType: r.relationType
       }))
+
+    // 2. Fallback links from legacy 'refs' field (shown as 'related_to')
+    const legacyLinks: any[] = []
+    if (activeOutgoing.has('related_to') || activeIncoming.has('related_to')) {
+      filteredEntries.forEach(e => {
+        if (e.refs && Array.isArray(e.refs)) {
+          e.refs.forEach(refId => {
+            // Only add if target node exists and no explicit relation already covers this pair
+            if (nodes.find(x => x.id === refId) && 
+                !explicitLinks.find(l => (l.source === e.id && l.target === refId) || (l.source === refId && l.target === e.id))) {
+              legacyLinks.push({
+                source: e.id,
+                target: refId,
+                relationType: 'related_to'
+              })
+            }
+          })
+        }
+      })
+    }
+
+    const links = [...explicitLinks, ...legacyLinks]
 
     // Arrow markers per relation type
     const defs = svg.append('defs')
@@ -171,7 +204,7 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
       .scaleExtent([0.3, 3])
       .on('zoom', (event) => {
         g.attr('transform', event.transform)
-        savedTransform = { k: event.transform.k, x: event.transform.x, y: event.transform.y }
+        setSavedTransform({ k: event.transform.k, x: event.transform.x, y: event.transform.y })
       })
 
     svg.call(zoom)
@@ -283,12 +316,12 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
           })
           .on('drag', (event, d) => {
             d.fx = event.x; d.fy = event.y
-            savedPositions[d.id] = { x: event.x, y: event.y }
+            setSavedPositions(prev => ({ ...prev, [d.id]: { x: event.x, y: event.y } }))
           })
           .on('end', (event, d) => {
             if (!event.active) simulation.alphaTarget(0)
             d.fx = null; d.fy = null
-            savedPositions[d.id] = { x: d.x, y: d.y }
+            setSavedPositions(prev => ({ ...prev, [d.id]: { x: d.x, y: d.y } }))
           })
       )
 
@@ -317,7 +350,7 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
       link.attr('d', (d: any) => {
         const type = d.relationType;
         const isInverse = (selectedId && d.target.id === selectedId) || (!selectedId && activeIncoming.has(type) && !activeOutgoing.has(type));
-        
+
         const startNode = isInverse ? d.target : d.source;
         const endNode = isInverse ? d.source : d.target;
 
@@ -325,7 +358,7 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
         const dy = endNode.y - startNode.y
         const dr = Math.sqrt(dx * dx + dy * dy)
         const radius = d.curvature === 0 ? 0 : dr / (d.curvature * 2)
-        
+
         if (radius === 0) {
           return `M${startNode.x},${startNode.y}L${endNode.x},${endNode.y}`
         } else {
@@ -352,30 +385,30 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
           // 1. The original curvature direction
           // 2. Whether the visible link itself is currently inverted
           // 3. Whether we have swapped source/target for left-to-right readability
-          
+
           const type = d.relationType;
           const isLinkInverse = (selectedId && d.target.id === selectedId) || (!selectedId && activeIncoming.has(type) && !activeOutgoing.has(type));
-          
+
           // The visible link sweep logic: sweep = (d.curvature > 0 ? 1 : 0)
           // If we are left-to-right and NOT inverse, we match d.source -> d.target.
           // If we swapped for readability OR the link is inverse, we might need to flip the sweep.
-          
+
           let sweep = d.curvature > 0 ? 1 : 0;
-          
+
           // If the readable path direction (start->end) is OPPOSITE to the link path direction, flip sweep.
           const linkStart = isLinkInverse ? d.target : d.source;
           if (start.id !== linkStart.id) {
             sweep = 1 - sweep;
           }
-          
+
           return `M${start.x},${start.y}A${Math.abs(radius)},${Math.abs(radius)} 0 0,${sweep} ${end.x},${end.y}`
         }
       })
 
       node.attr('transform', (d: any) => `translate(${d.x},${d.y})`)
-      nodes.forEach(n => {
-        savedPositions[n.id] = { x: (n as any).x, y: (n as any).y }
-      })
+      // Batch position updates only on end of drag to avoid state storm if possible, 
+      // but tick-based update is harder to throttle without losing sync.
+      // We'll rely on the drag handler for manual moves.
     })
 
     return () => { simulation.stop() }
@@ -433,7 +466,7 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
         <div style={{ fontSize: '0.65rem', color: theme.colors.textMuted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${theme.colors.border}`, paddingBottom: 6, marginBottom: 4 }}>
           Relationships
         </div>
-        
+
         <div style={{ display: 'flex', gap: 20 }}>
           {/* Outgoing Section */}
           <div style={{ flex: 1 }}>

@@ -13,11 +13,12 @@ import { SOURCE_TYPE_COLORS } from '@/lib/core/constants'
 interface Props {
   sources: Source[]
   onReload: () => void
+  onSelectSource: (s: Source) => void
 }
 
 const SOURCE_TYPES = ['pdf', 'markdown', 'manual', 'book', 'paper', 'lecture']
 
-export default function SourcesView({ sources, onReload }: Props) {
+export default function SourcesView({ sources, onReload, onSelectSource }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState({ title: '', sourceType: 'book', filepath: '', pageRange: '', bibInfo: '' })
@@ -242,7 +243,7 @@ export default function SourcesView({ sources, onReload }: Props) {
         onSelectIds={(ids: any) => setSelectedSourceIds(ids)}
         sortConfig={sortConfig}
         onSort={onSort}
-        onRowClick={startEdit}
+        onRowClick={onSelectSource}
       />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 40 }}>

@@ -5,6 +5,7 @@ export interface Entry {
   type: string; 
   title: string; 
   content: string;
+  latex?: string | null;
   tags: string[]; 
   refs: number[]; 
   createdAt: string; 
@@ -12,10 +13,16 @@ export interface Entry {
   versionNote?: string; 
   sourceId?: number | null; 
   pageRange?: string; 
+  pageStart?: number | null;
+  pageEnd?: number | null;
   symbolKeywords?: string[];
   personalNotes?: string;
   relationData?: Record<number, string>;
   _backlinkIds?: number[];
+  
+  // Relations from schema
+  outgoing?: Relation[];
+  incoming?: Relation[];
 }
 
 export interface Source { 
@@ -23,6 +30,9 @@ export interface Source {
   title: string; 
   sourceType: string; 
   filepath: string; 
+  fileName?: string | null;
+  authors?: string | null;
+  year?: string | null;
   pageRange: string; 
   bibInfo: string; 
   createdAt: string; 
@@ -36,6 +46,10 @@ export interface Relation {
   relationType: string; 
   confidence: number; 
   createdBy: string;
+  
+  // Relations from schema
+  fromEntry?: Entry;
+  toEntry?: Entry;
 }
 
 export interface DeletedItem extends Partial<Entry>, Partial<Source> {

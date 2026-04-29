@@ -16,6 +16,9 @@ model Source {
   title       String
   sourceType  String   // pdf | markdown | manual | book | paper | lecture
   filepath    String   @default("")
+  fileName    String?  
+  authors     String?  
+  year        String?  
   pageRange   String   @default("")
   bibInfo     String   @default("")
   isDeleted   Boolean  @default(false)
@@ -28,30 +31,41 @@ model Entry {
   type           String   // definition | theorem | lemma | corollary | example | remark
   title          String
   content        String   // LaTeX + markdown
-  tags           String   // JSON array string olarak saklanır: '["analysis","topology"]'
-  refs           String   @default("[]") // JSON array of Entry IDs
+  latex          String?  
+  tags           String   // JSON array string
+  refs           String   @default("[]")
   sourceId       Int?
   source         Source?  @relation(fields: [sourceId], references: [id])
   pageRange      String   @default("")
-  symbolKeywords String   @default("[]") // JSON array of extracted keywords
+  pageStart      Int?     
+  pageEnd        Int?     
+  symbolKeywords String   @default("[]")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   versionNote    String?
   personalNotes  String   @default("")
   isDeleted      Boolean  @default(false)
 
-  // Versiyon geçmişi
+  // Explicit relations back to Relation model
+  outgoing    Relation[] @relation("OutgoingRelations")
+  incoming    Relation[] @relation("IncomingRelations")
+
   versions    EntryVersion[]
 }
 
 model Relation {
-  id            Int      @id @default(autoincrement())
+  id            Int          @id @default(autoincrement())
   fromEntryId   Int
   toEntryId     Int
-  relationType  String   // uses | example_of | generalizes | proof_depends_on | related_to | contrasts_with
-  confidence    Float    @default(1.0)
-  createdBy     String   @default("user")
-  createdAt     DateTime @default(now())
+  relationType  String       // uses | example_of | generalizes | proof_depends_on | related_to | contrasts_with
+  confidence    Float        @default(1.0)
+  createdBy     String       @default("user")
+  createdAt     DateTime     @default(now())
+
+  fromEntry     Entry        @relation("OutgoingRelations", fields: [fromEntryId], references: [id])
+  toEntry       Entry        @relation("IncomingRelations", fields: [toEntryId], references: [id])
+
+  @@unique([fromEntryId, toEntryId, relationType])
 }
 
 model EntryVersion {
@@ -70,8 +84,8 @@ model EntryVersion {
 model Tag {
   id       Int    @id @default(autoincrement())
   name     String @unique
-  parent   String @default("") // hiyerarşi: "functional-analysis" parent'ı "analysis"
-  color    String @default("") // override renk
+  parent   String @default("")
+  color    String @default("")
 }
 
 model Settings {

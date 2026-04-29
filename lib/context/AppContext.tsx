@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useMathBase } from '@/hooks/useMathBase'
-import { Entry } from '@/types'
+import { Entry, Source } from '@/types'
 
 export const THEME_COLORS = {
   gold: { dark: '#c9a84c', light: '#725712' },
@@ -38,7 +38,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const activeView = pathname === '/dashboard' ? 'dashboard' :
     pathname === '/entry' ? 'entry' :
       pathname === '/graph' ? 'graph' :
-        pathname === '/sources' ? 'sources' :
+        pathname.startsWith('/sources') ? 'sources' :
           pathname === '/trash' ? 'deleted' :
             pathname === '/import' ? 'import' :
               pathname.startsWith('/entry') ? 'entry' :
@@ -64,6 +64,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedEntryIds, setSelectedEntryIds] = useState<Set<number>>(new Set())
   const [selectedDeletedIds, setSelectedDeletedIds] = useState<Set<string>>(new Set())
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' | null }>({ key: '', direction: null })
+
+  // Graph Persistence State
+  const [graphHiddenTypes, setGraphHiddenTypes] = useState<Set<string>>(new Set())
+  const [graphActiveIncoming, setGraphActiveIncoming] = useState<Set<string>>(new Set([
+    'uses', 'example_of', 'generalizes', 'proof_depends_on', 'related_to', 'contrasts_with'
+  ]))
+  const [graphActiveOutgoing, setGraphActiveOutgoing] = useState<Set<string>>(new Set())
+  const [graphPositions, setGraphPositions] = useState<Record<number, { x: number; y: number }>>({})
+  const [graphTransform, setGraphTransform] = useState<{ k: number; x: number; y: number } | null>(null)
 
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -111,6 +120,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const selectEntry = useCallback((e: Entry) => {
     router.push(`/entry/${e.id}`)
+  }, [router])
+
+  const selectSource = useCallback((s: Source) => {
+    router.push(`/sources/${s.id}`)
   }, [router])
 
   const editEntry = useCallback((id: number) => {
@@ -225,15 +238,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       entries, sources, relations, deletedItems, loading,
       activeView, selected, mode, sidebarOpen, search, editorKey, themeMode, accentColor,
       activeTags, activeTypes, activeTitles, showFilterDropdown, itemsPerPage, currentPage, deletedPage,
-      selectedEntryIds, selectedDeletedIds, sortConfig, filtered
+      selectedEntryIds, selectedDeletedIds, sortConfig, filtered,
+      graphHiddenTypes, graphActiveIncoming, graphActiveOutgoing, graphPositions, graphTransform
     },
     refs: { searchInputRef },
     actions: {
       setSelected, setMode, setSidebarOpen, setSearch, setEditorKey, toggleTheme, changeAccentColor,
       setActiveTags, setActiveTypes, setActiveTitles, setShowFilterDropdown, setItemsPerPage, setCurrentPage, setDeletedPage,
       setSelectedEntryIds, setSelectedDeletedIds,
-      goToView, selectEntry, editEntry, newEntry, handleSort, handleSave, handleBulkDelete, handleBulkRestoreDeleted,
-      handleBulkPermanentDelete, handleDeleteAllPermanently, refreshAll, handleDelete, handleRestore, handlePermanentDelete
+      goToView, selectEntry, selectSource, editEntry, newEntry, handleSort, handleSave, handleBulkDelete, handleBulkRestoreDeleted,
+      handleBulkPermanentDelete, handleDeleteAllPermanently, refreshAll, handleDelete, handleRestore, handlePermanentDelete,
+      setGraphHiddenTypes, setGraphActiveIncoming, setGraphActiveOutgoing, setGraphPositions, setGraphTransform
     }
   }
 

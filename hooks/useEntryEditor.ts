@@ -62,7 +62,7 @@ export function useEntryEditor({
 
   // Section visibility
   const [openSections, setOpenSections] = useState({
-    sources: false,
+    sources: !!initial?.sourceId,
     tags: false,
     relations: false
   })

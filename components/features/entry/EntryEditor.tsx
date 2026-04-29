@@ -81,7 +81,7 @@ const CollapsibleSection = ({
 
 export default function EntryEditor(props: Props) {
   const { initial, allEntries = [], sources = [] } = props
-  
+
   // Separation of Logic:
   const { state, refs, actions } = useEntryEditor(props)
   const [showMathGuide, setShowMathGuide] = React.useState(false)
@@ -103,7 +103,7 @@ export default function EntryEditor(props: Props) {
 
   // Dynamic Monaco Theme Binding
   const [monacoTheme, setMonacoTheme] = React.useState('mathbase-dark')
-  
+
   const handleEditorBeforeMount = (monaco: any) => {
     // Custom Dark Theme
     monaco.editor.defineTheme('mathbase-dark', {
@@ -114,7 +114,7 @@ export default function EntryEditor(props: Props) {
         'editor.background': '#0d0e12',
       }
     })
-    
+
     // Custom Light Theme
     monaco.editor.defineTheme('mathbase-light', {
       base: 'vs',
@@ -208,11 +208,11 @@ export default function EntryEditor(props: Props) {
           )}
 
           {/* Monaco Editor Container - Stretches to fill gap */}
-          <div ref={refs.editorContainerRef} style={{ 
-            flex: 2, // Take more space
+          <div ref={refs.editorContainerRef} style={{
+            flex: 2,
             minHeight: 300,
             width: '100%',
-            overflow: 'hidden', 
+            overflow: 'hidden',
             position: 'relative',
             borderBottom: `1px solid ${theme.colors.border}`,
             display: 'flex',
@@ -220,6 +220,7 @@ export default function EntryEditor(props: Props) {
           }}>
             <MonacoEditor
               height="100%"
+              width="100%"
               defaultLanguage="markdown"
               value={state.content}
               onChange={v => actions.setContent(v || '')}
@@ -234,32 +235,36 @@ export default function EntryEditor(props: Props) {
                 lineNumbers: 'on',
                 minimap: { enabled: false },
                 wordWrap: 'on',
-                wrappingIndent: 'indent',
-                wrappingStrategy: 'advanced',
+                wrappingIndent: 'none',
+                wrappingStrategy: 'simple',
                 scrollBeyondLastLine: false,
                 padding: { top: 16, bottom: 16 },
                 quickSuggestions: false,
                 fontLigatures: true,
-                disableLayerHinting: true,
                 automaticLayout: true,
                 renderLineHighlight: 'all',
                 cursorBlinking: 'smooth',
                 cursorSmoothCaretAnimation: 'on',
                 smoothScrolling: true,
                 scrollbar: {
-                  vertical: 'hidden',
-                  horizontal: 'hidden'
-                }
+                  vertical: 'auto',
+                  horizontal: 'hidden',
+                  verticalScrollbarSize: 80,
+                  verticalHasArrows: false,
+                  useShadows: false
+                },
+                overviewRulerLanes: 0,
+                hideCursorInOverviewRuler: true
               }}
             />
           </div>
 
           {/* Property Pane - Scrollable if too many relations */}
-          <div style={{ 
-            flex: '0 1 auto', 
+          <div style={{
+            flex: '0 1 auto',
             maxHeight: '45%',
-            display: 'flex', 
-            flexDirection: 'column', 
+            display: 'flex',
+            flexDirection: 'column',
             background: theme.colors.background,
             overflowY: 'auto',
             overflowX: 'hidden',
@@ -321,12 +326,12 @@ export default function EntryEditor(props: Props) {
               summary={state.refs.length + ' links'}
             >
               {/* Search Bar Row with AI Suggest Inside */}
-              <div style={{ 
-                display: 'flex', 
-                gap: 10, 
-                position: 'relative', 
-                marginBottom: 12, 
-                alignItems: 'center', 
+              <div style={{
+                display: 'flex',
+                gap: 10,
+                position: 'relative',
+                marginBottom: 12,
+                alignItems: 'center',
                 zIndex: 200 // Higher than backdrop (150)
               }}>
                 <div ref={refs.searchContainerRef} style={{ flex: 1, position: 'relative' }}>
@@ -571,10 +576,10 @@ export default function EntryEditor(props: Props) {
         }}>
           Live Preview
         </div>
-        <div style={{ 
-          flex: 1, 
-          overflowX: 'hidden', 
-          overflowY: 'auto', 
+        <div style={{
+          flex: 1,
+          overflowX: 'hidden',
+          overflowY: 'auto',
           padding: '32px 24px',
           width: '100%',
           maxWidth: 'none'
@@ -614,6 +619,21 @@ export default function EntryEditor(props: Props) {
           )}
         </div>
       </div>
+      <style>{`
+        .monaco-editor .scrollbar.vertical {
+          width: 14px !important;
+          right: 0 !important;
+          background: transparent !important;
+        }
+        .monaco-editor .scrollbar.vertical .slider {
+          width: 10px !important;
+          left: 2px !important;
+          border-radius: 10px;
+        }
+        .monaco-editor .decorationsOverviewRuler {
+          display: none !important;
+        }
+      `}</style>
     </div>
   )
 }

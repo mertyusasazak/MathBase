@@ -12,6 +12,7 @@ export default function SourcesPage() {
     <SourcesView 
       sources={state.sources} 
       onReload={actions.refreshAll} 
+      onSelectSource={actions.selectSource}
     />
   )
 }
