@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import * as d3 from 'd3'
 import { Entry, Relation } from '@/types'
 import { theme } from '@/lib/core/theme'
+import { RELATION_LABELS, INVERSE_RELATION_LABELS } from '@/lib/core/constants'
 
 
 interface Props {
@@ -32,6 +33,8 @@ const RELATION_COLORS: Record<string, string> = {
   contrasts_with: '#cc6ba8',
 }
 
+const ALL_RELATION_TYPES = Object.keys(RELATION_COLORS)
+
 const savedPositions: Record<number, { x: number; y: number }> = {}
 let savedTransform: { k: number; x: number; y: number } | null = null
 
@@ -39,7 +42,8 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
   const svgRef = useRef<SVGSVGElement>(null)
   const [resetKey, setResetKey] = useState(0)
   const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set())
-  const [hiddenRelations, setHiddenRelations] = useState<Set<string>>(new Set())
+  const [activeIncoming, setActiveIncoming] = useState<Set<string>>(new Set(ALL_RELATION_TYPES))
+  const [activeOutgoing, setActiveOutgoing] = useState<Set<string>>(new Set())
   const [hoveredNode, setHoveredNode] = useState<any>(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
 
@@ -47,7 +51,8 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
     Object.keys(savedPositions).forEach(k => delete savedPositions[parseInt(k)])
     savedTransform = null
     setHiddenTypes(new Set())
-    setHiddenRelations(new Set())
+    setActiveIncoming(new Set(ALL_RELATION_TYPES))
+    setActiveOutgoing(new Set())
     setResetKey(k => k + 1)
   }, [])
 
@@ -60,8 +65,17 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
     })
   }
 
-  const toggleRelation = (rel: string) => {
-    setHiddenRelations(prev => {
+  const toggleIncoming = (rel: string) => {
+    setActiveIncoming(prev => {
+      const next = new Set(prev)
+      if (next.has(rel)) next.delete(rel)
+      else next.add(rel)
+      return next
+    })
+  }
+
+  const toggleOutgoing = (rel: string) => {
+    setActiveOutgoing(prev => {
       const next = new Set(prev)
       if (next.has(rel)) next.delete(rel)
       else next.add(rel)
@@ -73,11 +87,28 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
     if (!svgRef.current || entries.length === 0) return
 
     const filteredEntries = entries.filter(e => !hiddenTypes.has(e.type))
-    const filteredRelations = relations.filter(r =>
-      !hiddenRelations.has(r.relationType) &&
-      !hiddenTypes.has(entries.find(x => x.id === r.fromEntryId)?.type || '') &&
-      !hiddenTypes.has(entries.find(x => x.id === r.toEntryId)?.type || '')
-    )
+    const filteredRelations = relations.filter(r => {
+      // Global entry types filter first
+      const fromType = entries.find(x => x.id === r.fromEntryId)?.type || ''
+      const toType = entries.find(x => x.id === r.toEntryId)?.type || ''
+      if (hiddenTypes.has(fromType) || hiddenTypes.has(toType)) return false
+
+      // Directional filters
+      if (selectedId) {
+        // If node selected, only show edges that are "active" in their respective direction
+        if (r.fromEntryId === selectedId) return activeOutgoing.has(r.relationType)
+        if (r.toEntryId === selectedId) return activeIncoming.has(r.relationType)
+        
+        // Hide relations not connected to the selected node for focus
+        return false 
+      } else {
+        // If no node selected, hide only if type is inactive in BOTH columns (since each represents a direction)
+        // or effectively, if it's "selected" in either, it shows? 
+        // User wants "independent" - so let's say it shows if active in its direction globally.
+        // But every edge is both. So it shows if (activeOutgoing HAS type OR activeIncoming HAS type)
+        return activeOutgoing.has(r.relationType) || activeIncoming.has(r.relationType)
+      }
+    })
 
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
@@ -155,10 +186,10 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
     const hasPositions = entries.some(e => savedPositions[e.id])
 
     const simulation = d3.forceSimulation(nodes as any)
-      .force('link', d3.forceLink(links).id((d: any) => d.id).distance(140))
-      .force('charge', d3.forceManyBody().strength(-300))
+      .force('link', d3.forceLink(links).id((d: any) => d.id).distance(300))
+      .force('charge', d3.forceManyBody().strength(-1200))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(40))
+      .force('collision', d3.forceCollide().radius(120))
       .alpha(hasPositions ? 0.05 : 1)
       .alphaDecay(hasPositions ? 0.1 : 0.028)
 
@@ -215,7 +246,20 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
       .attr('text-anchor', 'middle')
       .attr('dominant-baseline', 'central')
       .attr('fill', (d: any) => RELATION_COLORS[d.relationType] || theme.colors.textMuted)
-      .text((d: any) => d.relationType.replace(/_/g, ' '))
+      .text((d: any) => {
+        const type = d.relationType;
+        // If a node is selected, prioritize its perspective
+        if (selectedId) {
+          if (d.target.id === selectedId) return INVERSE_RELATION_LABELS[type] || type.replace(/_/g, ' ');
+          return RELATION_LABELS[type] || type.replace(/_/g, ' ');
+        }
+        // If no node selected, use label based on which directional filter is active
+        // If only Incoming is active for this type, use the inverse label
+        if (activeIncoming.has(type) && !activeOutgoing.has(type)) {
+          return INVERSE_RELATION_LABELS[type] || type.replace(/_/g, ' ');
+        }
+        return RELATION_LABELS[type] || type.replace(/_/g, ' ');
+      })
 
     const node = g.append('g')
       .selectAll('g').data(nodes).join('g')
@@ -271,36 +315,59 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
 
     simulation.on('tick', () => {
       link.attr('d', (d: any) => {
-        const dx = d.target.x - d.source.x
-        const dy = d.target.y - d.source.y
+        const type = d.relationType;
+        const isInverse = (selectedId && d.target.id === selectedId) || (!selectedId && activeIncoming.has(type) && !activeOutgoing.has(type));
+        
+        const startNode = isInverse ? d.target : d.source;
+        const endNode = isInverse ? d.source : d.target;
+
+        const dx = endNode.x - startNode.x
+        const dy = endNode.y - startNode.y
         const dr = Math.sqrt(dx * dx + dy * dy)
         const radius = d.curvature === 0 ? 0 : dr / (d.curvature * 2)
         
         if (radius === 0) {
-          return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`
+          return `M${startNode.x},${startNode.y}L${endNode.x},${endNode.y}`
         } else {
           const sweep = d.curvature > 0 ? 1 : 0
-          return `M${d.source.x},${d.source.y}A${Math.abs(radius)},${Math.abs(radius)} 0 0,${sweep} ${d.target.x},${d.target.y}`
+          return `M${startNode.x},${startNode.y}A${Math.abs(radius)},${Math.abs(radius)} 0 0,${sweep} ${endNode.x},${endNode.y}`
         }
       })
 
-      // Update helper paths for text (always left-to-right)
+      // Update helper paths for text (always left-to-right for readability)
       textPath.attr('d', (d: any) => {
         const isLeftToRight = d.source.x <= d.target.x
         const start = isLeftToRight ? d.source : d.target
         const end = isLeftToRight ? d.target : d.source
-        
+
         const dx = end.x - start.x
         const dy = end.y - start.y
         const dr = Math.sqrt(dx * dx + dy * dy)
         const radius = d.curvature === 0 ? 0 : dr / (d.curvature * 2)
-        
+
         if (radius === 0) {
           return `M${start.x},${start.y}L${end.x},${end.y}`
         } else {
-          // If we reversed the direction, we must also flip the sweep to keep the curve shape same
-          const baseSweep = d.curvature > 0 ? 1 : 0
-          const sweep = isLeftToRight ? baseSweep : (1 - baseSweep)
+          // To keep the same arc as the visible link, we must account for:
+          // 1. The original curvature direction
+          // 2. Whether the visible link itself is currently inverted
+          // 3. Whether we have swapped source/target for left-to-right readability
+          
+          const type = d.relationType;
+          const isLinkInverse = (selectedId && d.target.id === selectedId) || (!selectedId && activeIncoming.has(type) && !activeOutgoing.has(type));
+          
+          // The visible link sweep logic: sweep = (d.curvature > 0 ? 1 : 0)
+          // If we are left-to-right and NOT inverse, we match d.source -> d.target.
+          // If we swapped for readability OR the link is inverse, we might need to flip the sweep.
+          
+          let sweep = d.curvature > 0 ? 1 : 0;
+          
+          // If the readable path direction (start->end) is OPPOSITE to the link path direction, flip sweep.
+          const linkStart = isLinkInverse ? d.target : d.source;
+          if (start.id !== linkStart.id) {
+            sweep = 1 - sweep;
+          }
+          
           return `M${start.x},${start.y}A${Math.abs(radius)},${Math.abs(radius)} 0 0,${sweep} ${end.x},${end.y}`
         }
       })
@@ -312,7 +379,7 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
     })
 
     return () => { simulation.stop() }
-  }, [entries, resetKey, relations, hiddenTypes, hiddenRelations])
+  }, [entries, resetKey, relations, hiddenTypes, activeIncoming, activeOutgoing, selectedId])
 
   // Update selected node colors
   useEffect(() => {
@@ -356,29 +423,70 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
       {/* Relation type legend */}
       <div style={{
         position: 'absolute', top: 12, right: 12, zIndex: 10,
-        display: 'flex', flexDirection: 'column', gap: 4,
+        display: 'flex', flexDirection: 'column', gap: 12,
         background: theme.colors.background + '99',
-        padding: '8px', borderRadius: 8, backdropFilter: 'blur(4px)',
-        border: `1px solid ${theme.colors.border}`
+        padding: '12px', borderRadius: 12, backdropFilter: 'blur(8px)',
+        border: `1px solid ${theme.colors.border}`,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+        minWidth: 240
       }}>
-        <div style={{ fontSize: '0.6rem', color: theme.colors.textMuted, marginBottom: 4, fontWeight: 700, textTransform: 'uppercase' }}>Relationships</div>
-        {Object.entries(RELATION_COLORS).map(([type, color]) => (
-          <span
-            key={type}
-            onClick={() => toggleRelation(type)}
-            style={{
-              fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.58rem',
-              padding: '2px 6px', color: hiddenRelations.has(type) ? theme.colors.textMuted : color + 'cc',
-              display: 'flex', alignItems: 'center', gap: 4,
-              cursor: 'pointer',
-              opacity: hiddenRelations.has(type) ? 0.4 : 1,
-              transition: 'all 0.2s'
-            }}
-          >
-            <span style={{ display: 'inline-block', width: 12, height: 2, background: hiddenRelations.has(type) ? theme.colors.border : color + '88' }} />
-            {type.replace(/_/g, ' ')}
-          </span>
-        ))}
+        <div style={{ fontSize: '0.65rem', color: theme.colors.textMuted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${theme.colors.border}`, paddingBottom: 6, marginBottom: 4 }}>
+          Relationships
+        </div>
+        
+        <div style={{ display: 'flex', gap: 20 }}>
+          {/* Outgoing Section */}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.55rem', color: theme.colors.accent, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', opacity: 0.8 }}>Outgoing</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {Object.entries(RELATION_COLORS).map(([type, color]) => (
+                <span
+                  key={type}
+                  onClick={() => toggleOutgoing(type)}
+                  style={{
+                    fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.58rem',
+                    padding: '3px 6px', color: !activeOutgoing.has(type) ? theme.colors.textMuted : color + 'cc',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    cursor: 'pointer',
+                    background: !activeOutgoing.has(type) ? 'transparent' : color + '11',
+                    borderRadius: 4,
+                    opacity: !activeOutgoing.has(type) ? 0.4 : 1,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <span style={{ display: 'inline-block', width: 8, height: 2, background: !activeOutgoing.has(type) ? theme.colors.border : color + '88' }} />
+                  {RELATION_LABELS[type] || type.replace(/_/g, ' ')}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Incoming Section */}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.55rem', color: theme.colors.accent, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', opacity: 0.8 }}>Incoming</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {Object.entries(RELATION_COLORS).map(([type, color]) => (
+                <span
+                  key={type}
+                  onClick={() => toggleIncoming(type)}
+                  style={{
+                    fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.58rem',
+                    padding: '3px 6px', color: !activeIncoming.has(type) ? theme.colors.textMuted : color + 'cc',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    cursor: 'pointer',
+                    background: !activeIncoming.has(type) ? 'transparent' : color + '11',
+                    borderRadius: 4,
+                    opacity: !activeIncoming.has(type) ? 0.4 : 1,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <span style={{ display: 'inline-block', width: 8, height: 2, background: !activeIncoming.has(type) ? theme.colors.border : color + '88' }} />
+                  {INVERSE_RELATION_LABELS[type] || type.replace(/_/g, ' ')}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Hover Tooltip */}

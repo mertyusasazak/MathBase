@@ -29,3 +29,12 @@ export const RELATION_LABELS: Record<string, string> = {
   related_to: 'Related',
   contrasts_with: 'Contrasts'
 }
+
+export const INVERSE_RELATION_LABELS: Record<string, string> = {
+  uses: 'Used By',
+  example_of: 'Instances / Examples',
+  generalizes: 'Generalized By',
+  proof_depends_on: 'Proof Base for',
+  related_to: 'Related (Incoming)',
+  contrasts_with: 'Contrasted By'
+}
