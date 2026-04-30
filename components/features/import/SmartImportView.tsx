@@ -464,13 +464,12 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
   )
 }
 
-function CandidateCard({ candidate, viewMode, isSelected, onToggleSelect, onUpdate, onSave, onDelete }: { 
+function CandidateCard({ candidate, viewMode, isSelected, onToggleSelect, onUpdate, onDelete }: { 
   candidate: Candidate, 
   viewMode: 'grid' | 'list',
   isSelected: boolean,
   onToggleSelect: () => void,
   onUpdate: (u: Partial<Candidate>) => void,
-  onSave: () => void,
   onDelete: () => void
 }) {
   const isSaved = candidate.status === 'saved'
