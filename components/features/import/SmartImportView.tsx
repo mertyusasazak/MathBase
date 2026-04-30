@@ -8,7 +8,7 @@ import {
 import { Button, Badge } from '@/components/ui/Common'
 import { MathRenderer } from '@/lib/core/MathRenderer'
 import { theme } from '@/lib/core/theme'
-import { TYPE_COLORS } from '@/lib/core/constants'
+import { TYPE_COLORS, ENTRY_TYPES } from '@/lib/core/constants'
 import { useAppContext } from '@/lib/context/AppContext'
 
 interface Candidate {
@@ -35,6 +35,7 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [sourceId, setSourceId] = useState<number | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [jsonRestoreData, setJsonRestoreData] = useState<any>(null)
   const scrollContainerRef = React.useRef<HTMLDivElement>(null)
@@ -78,25 +79,6 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
       }))
       setCandidates(mapped)
 
-      // Automatically create a Source record for this PDF
-      try {
-        const sRes = await fetch('/api/sources', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: selectedFile.name,
-            sourceType: 'pdf',
-            filepath: `/uploads/${selectedFile.name}`,
-            pageRange: `1-${data.length > 0 ? Math.max(...data.map((x:any) => parseInt(x.pageRange) || 0)) : 1}`
-          })
-        })
-        if (sRes.ok) {
-          const sData = await sRes.json()
-          setSourceId(sData.id)
-        }
-      } catch (sErr) {
-        console.error('Failed to create source automatically:', sErr)
-      }
     } catch (err) {
       console.error(err)
       alert('Failed to extract data from PDF. Please ensure PyMuPDF is installed and the PDF is readable.')
@@ -140,8 +122,36 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
     setCandidates(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c))
   }
 
+  const ensureSourceCreated = async () => {
+    if (sourceId) return sourceId
+    if (!file) return null
+
+    try {
+      const res = await fetch('/api/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: file.name,
+          sourceType: 'pdf',
+          filepath: `/uploads/${file.name}`,
+          pageRange: `1-${candidates.length > 0 ? Math.max(...candidates.map((x:any) => parseInt(x.pageRange) || 0)) : 1}`
+        })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setSourceId(data.id)
+        return data.id
+      }
+    } catch (err) {
+      console.error('Lazy source creation failed:', err)
+    }
+    return null
+  }
+
   const handleSaveOne = async (candidate: Candidate) => {
     handleUpdateCandidate(candidate.id!, { status: 'pending' })
+    const sid = await ensureSourceCreated()
+    
     try {
       const res = await fetch('/api/entry', {
         method: 'POST',
@@ -152,7 +162,7 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
           content: candidate.content,
           tags: candidate.tags,
           manualKeywords: candidate.keywords,
-          sourceId: sourceId,
+          sourceId: sid,
           pageRange: candidate.pageRange,
           relationTitles: candidate.relations
         })
@@ -165,12 +175,41 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
     }
   }
 
+  const handleSaveSelected = async () => {
+    const toSave = candidates.filter(c => selectedIds.has(c.id!) && c.status === 'pending')
+    for (const c of toSave) {
+      await handleSaveOne(c)
+    }
+    setSelectedIds(new Set())
+  }
+
   const handleSaveAll = async () => {
     const pending = candidates.filter(c => c.status === 'pending')
     for (const c of pending) {
       await handleSaveOne(c)
     }
     onComplete()
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleCancel = () => {
+    if (candidates.length > 0 || file || jsonRestoreData) {
+      setCandidates([])
+      setFile(null)
+      setSelectedIds(new Set())
+      setJsonRestoreData(null)
+      setSourceId(null)
+    } else {
+      onClose()
+    }
   }
 
   return (
@@ -256,24 +295,55 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
               />
             </div>
           )}
-          <Button 
-            variant="gold" 
-            onClick={onClose}
-            style={{ height: 44, padding: '0 20px' }}
-          >
-            Cancel
-          </Button>
-          {candidates.length > 0 && (
+          {(candidates.length > 0 || file || jsonRestoreData) && (
             <Button 
               variant="gold" 
-              size="md"
-              onClick={handleSaveAll}
-              disabled={candidates.every(c => c.status === 'saved')}
-              style={{ padding: '0 24px', height: 44 }}
-              icon={<Save size={20} />}
+              onClick={handleCancel}
+              style={{ height: 44, padding: '0 20px' }}
             >
-              Approve All
+              Cancel
             </Button>
+          )}
+          {candidates.length > 0 && (
+            <>
+              {selectedIds.size > 0 && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="md"
+                    onClick={() => setSelectedIds(new Set())}
+                    style={{ padding: '0 16px', height: 44, borderColor: theme.colors.border }}
+                  >
+                    Clear Selection
+                  </Button>
+                  <Button 
+                    variant="gold" 
+                    size="md"
+                    onClick={handleSaveSelected}
+                    style={{ 
+                      padding: '0 24px', 
+                      height: 44, 
+                      background: theme.colors.accent,
+                      color: theme.colors.onAccent || '#000', 
+                      fontWeight: 700
+                    }}
+                    icon={<Sparkles size={20} color={theme.colors.onAccent || '#000'} />}
+                  >
+                    Save Selected ({selectedIds.size})
+                  </Button>
+                </>
+              )}
+              <Button 
+                variant="gold" 
+                size="md"
+                onClick={handleSaveAll}
+                disabled={candidates.every(c => c.status === 'saved')}
+                style={{ padding: '0 24px', height: 44 }}
+                icon={<Save size={20} />}
+              >
+                Approve All
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -346,9 +416,17 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
               key={c.id} 
               candidate={c} 
               viewMode={viewMode}
+              isSelected={selectedIds.has(c.id!)}
+              onToggleSelect={() => toggleSelect(c.id!)}
               onUpdate={(u) => handleUpdateCandidate(c.id!, u)}
-              onSave={() => handleSaveOne(c)}
-              onDelete={() => setCandidates(prev => prev.filter(x => x.id !== c.id))}
+              onDelete={() => {
+                setCandidates(prev => prev.filter(x => x.id !== c.id))
+                setSelectedIds(prev => {
+                  const next = new Set(prev)
+                  next.delete(c.id!)
+                  return next
+                })
+              }}
             />
           ))}
         </div>
@@ -386,9 +464,11 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
   )
 }
 
-function CandidateCard({ candidate, viewMode, onUpdate, onSave, onDelete }: { 
+function CandidateCard({ candidate, viewMode, isSelected, onToggleSelect, onUpdate, onSave, onDelete }: { 
   candidate: Candidate, 
   viewMode: 'grid' | 'list',
+  isSelected: boolean,
+  onToggleSelect: () => void,
   onUpdate: (u: Partial<Candidate>) => void,
   onSave: () => void,
   onDelete: () => void
@@ -445,7 +525,7 @@ function CandidateCard({ candidate, viewMode, onUpdate, onSave, onDelete }: {
               outline: 'none'
             }}
           >
-            {['definition', 'theorem', 'lemma', 'example', 'corollary', 'proposition', 'note'].map(t => (
+            {ENTRY_TYPES.map(t => (
               <option key={t} value={t} style={{ background: theme.colors.surface, color: theme.colors.text }}>{t}</option>
             ))}
           </select>
@@ -571,6 +651,26 @@ function CandidateCard({ candidate, viewMode, onUpdate, onSave, onDelete }: {
       </div>
 
       <div style={{ display: 'flex', flexDirection: isList ? 'row' : 'column', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
+        {!isSaved && (
+          <div 
+            onClick={onToggleSelect}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              border: `2px solid ${isSelected ? theme.colors.accent : theme.colors.border}`,
+              background: isSelected ? theme.colors.accent : 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              marginBottom: isList ? 0 : 8
+            }}
+          >
+            {isSelected && <CheckCircle2 size={18} color={theme.colors.onAccent || '#000'} strokeWidth={3} />}
+          </div>
+        )}
         <Button 
           variant="ghost" 
           onClick={onDelete}
@@ -578,15 +678,6 @@ function CandidateCard({ candidate, viewMode, onUpdate, onSave, onDelete }: {
           style={{ color: theme.colors.danger, width: isList ? 44 : '100%', height: 44, padding: 0 }}
           icon={<Trash2 size={20} />}
         />
-        <Button 
-          variant="gold" 
-          onClick={onSave}
-          disabled={isSaved}
-          style={{ width: isList ? 120 : '100%', height: 44 }}
-          icon={<Save size={20} />}
-        >
-          {isSaved ? 'Saved' : 'Save'}
-        </Button>
       </div>
     </div>
   )

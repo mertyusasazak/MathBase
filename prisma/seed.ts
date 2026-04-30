@@ -151,6 +151,38 @@ const ENTRIES = [
     content: 'If $p$ is a prime number, then for any integer $a$, the number $a^p - a$ is an integer multiple of $p$.\n\nIn modular arithmetic notation:\n$$a^p \\equiv a \\pmod{p}$$',
     tags: ['number-theory', 'algebra'],
     sourceTitle: 'Introduction to Algorithms'
+  },
+
+  // --- ADVANCED TOPICS ---
+  {
+    type: 'theorem', title: 'Fundamental Theorem of Galois Theory',
+    content: 'Let $L/K$ be a finite Galois extension with Galois group $G = \\text{Gal}(L/K)$. There is a bijection between subextensions $K \\subset M \\subset L$ and subgroups $H \\subset G$, given by:\n\n1. $M \\mapsto \\text{Gal}(L/M)$\n2. $H \\mapsto L^H = \\{ x \\in L : \\sigma(x) = x \\text{ for all } \\sigma \\in H \\}$\n\nMoreover, the extension $M/K$ is normal iff $H$ is a normal subgroup of $G$, in which case $\\text{Gal}(M/K) \\cong G/H$.',
+    tags: ['algebra', 'galois-theory', 'group-theory'],
+    sourceTitle: 'Linear Algebra Done Right' // Using available sources for now
+  },
+  {
+    type: 'theorem', title: 'Sylow\'s First Theorem',
+    content: 'Let $G$ be a finite group of order $n = p^k m$, where $p$ is prime and $p \\nmid m$. Then $G$ contains at least one subgroup of order $p^k$, called a **Sylow $p$-subgroup**.\n\nLet $n_p$ be the number of Sylow $p$-subgroups. Sylow\'s Third Theorem states:\n1. $n_p \\equiv 1 \\pmod{p}$\n2. $n_p \\mid m$',
+    tags: ['algebra', 'group-theory'],
+    sourceTitle: 'Linear Algebra Done Right'
+  },
+  {
+    type: 'definition', title: 'Fundamental Group',
+    content: 'The **fundamental group** $\\pi_1(X, x_0)$ of a topological space $X$ with basepoint $x_0$ is the set of homotopy classes of loops based at $x_0$. \n\nThe group operation is defined by concatenation of paths:\n$$[f] \\cdot [g] = [f * g]$$\nwhere $(f * g)(t) = f(2t)$ for $t \\in [0, 1/2]$ and $g(2t-1)$ for $t \\in [1/2, 1]$.',
+    tags: ['topology', 'algebraic-topology'],
+    sourceTitle: 'Graph Theory and Its Applications'
+  },
+  {
+    type: 'theorem', title: 'Cauchy\'s Integral Formula',
+    content: 'Let $f$ be a holomorphic function on a simply connected domain $D$. For any closed disk $D(a, r) \\subset D$ and any $z$ in its interior:\n\n$$f(z) = \\frac{1}{2\\pi i} \\oint_{\\partial D} \\frac{f(w)}{w - z} \\, dw$$\n\nThis implies that holomorphic functions are infinitely differentiable and analytic.',
+    tags: ['analysis', 'complex-analysis'],
+    sourceTitle: 'Principles of Mathematical Analysis'
+  },
+  {
+    type: 'definition', title: 'Lebesgue Integral',
+    content: 'Let $(X, \\mathcal{M}, \\mu)$ be a measure space. For a non-negative measurable function $f$, the **Lebesgue integral** is defined as:\n\n$$\\int_X f \\, d\\mu = \\sup \\left\\{ \\int_X s \\, d\\mu : 0 \\leq s \\leq f, \\text{ s is simple} \\right\\}$$\n\nwhere $\\int_X s \\, d\\mu = \\sum_{i=1}^n a_i \\mu(E_i)$ for a simple function $s = \\sum a_i \\mathbb{1}_{E_i}$.',
+    tags: ['analysis', 'measure-theory'],
+    sourceTitle: 'Principles of Mathematical Analysis'
   }
 ]
 
@@ -212,6 +244,11 @@ async function main() {
     
     // Number Theory
     { from: 'Prime Number', to: 'Fermat\'s Little Theorem', type: 'uses' },
+
+    // Advanced Links
+    { from: 'Lebesgue Integral', to: '$L^2$ as Hilbert Space', type: 'uses' },
+    { from: 'Sylow\'s First Theorem', to: 'Fundamental Theorem of Galois Theory', type: 'related_to' },
+    { from: 'Open Set', to: 'Fundamental Group', type: 'uses' },
   ]
 
   for (const r of RELATIONS) {

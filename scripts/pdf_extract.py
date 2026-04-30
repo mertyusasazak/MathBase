@@ -18,11 +18,16 @@ def extract_candidates(pdf_path):
     candidates = []
     
     # Regex patterns for identifying blocks
-    # Looking for: Type [Number] [Title] or Type: Title
     patterns = [
-        r"(Definition|Theorem|Lemma|Example|Corollary|Proposition)\s+(\d+\.?\d*\.?\d*)\s*([\w\s]*)",
-        r"(Definition|Theorem|Lemma|Example|Corollary|Proposition):\s*([\w\s]*)"
+        r"(Definition|Theorem|Lemma|Example|Corollary|Proposition|Remark|Note)\s+(\d+\.?\d*\.?\d*)\s*([\w\s]*)",
+        r"(Definition|Theorem|Lemma|Example|Corollary|Proposition|Remark|Note):\s*([\w\s]*)"
     ]
+    
+    # Type mapping to align with app standard ENTRY_TYPES
+    TYPE_MAPPING = {
+        'proposition': 'theorem',
+        'note': 'remark'
+    }
     
     filename = os.path.basename(pdf_path)
     
@@ -43,7 +48,8 @@ def extract_candidates(pdf_path):
             for p in patterns:
                 match = re.match(p, line, re.IGNORECASE)
                 if match:
-                    detected_type = match.group(1).lower()
+                    raw_type = match.group(1).lower()
+                    detected_type = TYPE_MAPPING.get(raw_type, raw_type)
                     
                     if len(match.groups()) >= 3:
                         ref_id = match.group(2).strip()
