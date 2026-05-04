@@ -20,27 +20,11 @@ export default function Pagination({ currentPage, totalPages, onPageChange, styl
     const delta = 2 // Number of pages before/after current
     const range: (number | string)[] = []
     
-    // Always include first page
-    range.push(1)
-
-    if (currentPage > delta + 2) {
-      range.push('...')
-    }
-
-    const start = Math.max(2, currentPage - delta)
-    const end = Math.min(totalPages - 1, currentPage + delta)
+    const start = Math.max(1, currentPage - delta)
+    const end = Math.min(totalPages, currentPage + delta)
 
     for (let i = start; i <= end; i++) {
       range.push(i)
-    }
-
-    if (currentPage < totalPages - (delta + 1)) {
-      range.push('...')
-    }
-
-    // Always include last page
-    if (totalPages > 1) {
-      range.push(totalPages)
     }
 
     return range

@@ -3,9 +3,11 @@
 import React, { useState } from 'react'
 import {
   FileText, CheckCircle2, Loader2, Save,
-  Trash2, LayoutGrid, List, Sparkles, ArrowUp, Tag, Key, Link2, X, Eye, Code, FileJson
+  Trash2, Sparkles, ArrowUp, FileJson, Pencil, X, Eye, Code
 } from 'lucide-react'
-import { Button, Badge } from '@/components/ui/Common'
+import { Button, Badge, Select } from '@/components/ui/Common'
+import Pagination from '@/components/ui/Pagination'
+import { DataTable, Column } from '@/components/ui/DataTable'
 import { MathRenderer } from '@/lib/core/MathRenderer'
 import { theme } from '@/lib/core/theme'
 import { TYPE_COLORS, ENTRY_TYPES } from '@/lib/core/constants'
@@ -33,7 +35,10 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [candidates, setCandidates] = useState<Candidate[]>([])
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const totalPages = Math.max(1, Math.ceil(candidates.length / itemsPerPage))
+  const [editingCandidateId, setEditingCandidateId] = useState<string | null>(null)
   const [sourceId, setSourceId] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showScrollTop, setShowScrollTop] = useState(false)
@@ -49,25 +54,17 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
     scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (!selectedFile) return
     setFile(selectedFile)
-    
-    if (selectedFile.name.endsWith('.json')) {
-      handleJsonSelect(selectedFile)
-      return
-    }
 
     const formData = new FormData()
     formData.append('file', selectedFile)
-    
+
     setLoading(true)
     try {
-      const res = await fetch('/api/import/pdf', {
-        method: 'POST',
-        body: formData
-      })
+      const res = await fetch('/api/import/pdf', { method: 'POST', body: formData })
       if (!res.ok) throw new Error('Extraction failed')
       const data = await res.json()
       const mapped = data.map((c: any, i: number) => ({
@@ -78,7 +75,6 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
         relations: c.relations || []
       }))
       setCandidates(mapped)
-
     } catch (err) {
       console.error(err)
       alert('Failed to extract data from PDF. Please ensure PyMuPDF is installed and the PDF is readable.')
@@ -87,7 +83,9 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
     }
   }
 
-  const handleJsonSelect = (file: File) => {
+  const handleJsonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    if (!selectedFile) return
     const reader = new FileReader()
     reader.onload = (event) => {
       try {
@@ -97,7 +95,7 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
         alert('Invalid JSON file.')
       }
     }
-    reader.readAsText(file)
+    reader.readAsText(selectedFile)
   }
 
   const handleConfirmRestore = async (mode: 'merge' | 'replace') => {
@@ -213,20 +211,21 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
   }
 
   return (
-    <div 
-      ref={scrollContainerRef}
-      onScroll={handleScroll}
-      className="custom-scrollbar" 
-      style={{ 
-        width: '100%',
-        height: '100%', 
-        overflowY: 'auto',
-        position: 'relative',
-        background: 'var(--bg)',
-        zIndex: 10
-      }}
-    >
-      {/* HEADER */}
+    <div style={{ width: '100%', height: '100%', display: 'flex', position: 'relative', overflow: 'hidden', background: 'var(--bg)', zIndex: 10 }}>
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="custom-scrollbar" 
+        style={{ 
+          flex: 1, 
+          height: '100%',
+          overflowY: 'auto',
+          position: 'relative',
+          transition: 'padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          paddingRight: editingCandidateId ? 450 : 0
+        }}
+      >
+        {/* HEADER */}
       <div 
         style={{ 
           background: 'var(--bg)',
@@ -262,37 +261,10 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
         
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           {candidates.length > 0 && (
-            <div style={{ 
-              display: 'flex', 
-              background: 'rgba(255,255,255,0.03)', 
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: 12,
-              padding: 4
-            }}>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setViewMode('grid')}
-                style={{ 
-                  background: viewMode === 'grid' ? theme.colors.accent : 'transparent',
-                  color: viewMode === 'grid' ? theme.colors.onAccent : theme.colors.textMuted,
-                  borderRadius: 8,
-                  width: 36, height: 36, padding: 0
-                }}
-                icon={<LayoutGrid size={18} />}
-              />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setViewMode('list')}
-                style={{ 
-                  background: viewMode === 'list' ? theme.colors.accent : 'transparent',
-                  color: viewMode === 'list' ? theme.colors.onAccent : theme.colors.textMuted,
-                  borderRadius: 8,
-                  width: 36, height: 36, padding: 0
-                }}
-                icon={<List size={18} />}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginRight: 16 }}>
+              <span style={{ color: theme.colors.textMuted, fontSize: '0.9rem' }}>
+                {selectedIds.size} of {candidates.length} selected
+              </span>
             </div>
           )}
           {(candidates.length > 0 || file || jsonRestoreData) && (
@@ -351,34 +323,98 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
       <div style={{ padding: '40px 48px 100px' }}>
       {/* DROPZONE OR CONTENT */}
       {candidates.length === 0 && !loading && !jsonRestoreData ? (
-        <div 
-          onClick={() => document.getElementById('file-upload')?.click()}
-          style={{
-            height: 400,
-            border: `2px dashed ${theme.colors.border}`,
-            borderRadius: 32,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            background: `${theme.colors.surface}33`,
-            transition: 'all 0.3s ease'
-          }}
-        >
-          <div style={{ display: 'flex', gap: 20, marginBottom: 20 }}>
-            <FileText size={48} color={theme.colors.accent} />
-            <FileJson size={48} color={theme.colors.accent} />
-          </div>
-          <h2 style={{ fontSize: '1.5rem', color: theme.colors.text }}>Upload File to Import</h2>
-          <p style={{ color: theme.colors.textMuted }}>Support PDF (Extraction) and JSON (Backup Restore)</p>
-          <input 
-            id="file-upload" 
-            type="file" 
-            accept=".pdf,.json" 
-            onChange={handleFileUpload} 
-            style={{ display: 'none' }} 
-          />
+        <div style={{ display: 'flex', gap: 24, alignItems: 'stretch' }}>
+          {/* PDF Import Card */}
+          <label
+            htmlFor="upload-pdf"
+            style={{
+              flex: 1,
+              border: `2px dashed ${theme.colors.border}`,
+              borderRadius: 28,
+              padding: '48px 36px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: 16,
+              cursor: 'pointer',
+              background: `${theme.colors.surface}33`,
+              transition: 'all 0.25s ease',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = theme.colors.accent)}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = theme.colors.border)}
+          >
+            <div style={{ width: 72, height: 72, borderRadius: 20, background: `${theme.colors.accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileText size={36} color={theme.colors.accent} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: theme.colors.text, margin: '0 0 6px' }}>Import PDF</h2>
+              <p style={{ color: theme.colors.textMuted, margin: 0, fontSize: '0.88rem', lineHeight: 1.6 }}>
+                Extract definitions, theorems, lemmas and examples from a mathematical PDF.
+              </p>
+            </div>
+            <div style={{
+              marginTop: 8,
+              background: theme.colors.accent,
+              color: theme.colors.onAccent || '#000',
+              padding: '10px 28px',
+              borderRadius: 10,
+              fontSize: '0.88rem',
+              fontWeight: 700,
+            }}>
+              Upload PDF
+            </div>
+            <p style={{ color: theme.colors.textMuted, fontSize: '0.75rem', margin: 0 }}>or drag &amp; drop a .pdf file</p>
+            <input id="upload-pdf" type="file" accept=".pdf" onChange={handlePdfUpload} style={{ display: 'none' }} />
+          </label>
+
+          {/* Divider */}
+          <div style={{ width: 1, background: theme.colors.border, flexShrink: 0, alignSelf: 'stretch' }} />
+
+          {/* JSON Restore Card */}
+          <label
+            htmlFor="upload-json"
+            style={{
+              flex: 1,
+              border: `2px dashed ${theme.colors.border}`,
+              borderRadius: 28,
+              padding: '48px 36px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: 16,
+              cursor: 'pointer',
+              background: `${theme.colors.surface}33`,
+              transition: 'all 0.25s ease',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = theme.colors.textMuted)}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = theme.colors.border)}
+          >
+            <div style={{ width: 72, height: 72, borderRadius: 20, background: `${theme.colors.surface}`, border: `1px solid ${theme.colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileJson size={36} color={theme.colors.textMuted} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: theme.colors.text, margin: '0 0 6px' }}>Restore Backup</h2>
+              <p style={{ color: theme.colors.textMuted, margin: 0, fontSize: '0.88rem', lineHeight: 1.6 }}>
+                Merge or replace your library from a previously exported JSON backup file.
+              </p>
+            </div>
+            <div style={{
+              marginTop: 8,
+              background: 'transparent',
+              border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.textMuted,
+              padding: '10px 28px',
+              borderRadius: 10,
+              fontSize: '0.88rem',
+              fontWeight: 600,
+            }}>
+              Upload JSON
+            </div>
+            <p style={{ color: theme.colors.textMuted, fontSize: '0.75rem', margin: 0 }}>or drag &amp; drop a .json file</p>
+            <input id="upload-json" type="file" accept=".json" onChange={handleJsonUpload} style={{ display: 'none' }} />
+          </label>
         </div>
       ) : loading ? (
         <div style={{ height: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -406,29 +442,145 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
           </div>
         </div>
       ) : (
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: viewMode === 'grid' ? 'repeat(auto-fill, minmax(450px, 1fr))' : '1fr', 
-          gap: 32 
-        }}>
-          {candidates.map((c) => (
-            <CandidateCard 
-              key={c.id} 
-              candidate={c} 
-              viewMode={viewMode}
-              isSelected={selectedIds.has(c.id!)}
-              onToggleSelect={() => toggleSelect(c.id!)}
-              onUpdate={(u) => handleUpdateCandidate(c.id!, u)}
-              onDelete={() => {
-                setCandidates(prev => prev.filter(x => x.id !== c.id))
-                setSelectedIds(prev => {
-                  const next = new Set(prev)
-                  next.delete(c.id!)
-                  return next
-                })
-              }}
-            />
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <DataTable
+            columns={[
+              {
+                id: 'type',
+                label: 'Type',
+                width: 110,
+                render: (c) => (
+                  <span style={{
+                    background: `${TYPE_COLORS[c.type] || theme.colors.accent}22`,
+                    color: TYPE_COLORS[c.type] || theme.colors.accent,
+                    padding: '4px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase'
+                  }}>
+                    {c.type}
+                  </span>
+                )
+              },
+              {
+                id: 'title',
+                label: 'Title',
+                width: '25%',
+                render: (c) => (
+                  <div style={{ fontWeight: 600, color: theme.colors.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220 }}>
+                    {c.title}
+                  </div>
+                )
+              },
+              {
+                id: 'content',
+                label: 'Content Preview',
+                render: (c) => (
+                  <div style={{
+                    color: theme.colors.textMuted, fontSize: '0.9rem',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden', lineHeight: 1.5, maxHeight: '3em'
+                  }}>
+                    {c.content.replace(/[\n\r]+/g, ' ')}
+                  </div>
+                )
+              },
+              {
+                id: 'tags',
+                label: 'Tags',
+                width: 150,
+                render: (c) => (
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {c.tags.slice(0, 2).map((t, i) => (
+                      <Badge key={i} variant="muted" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>{t}</Badge>
+                    ))}
+                    {c.tags.length > 2 && (
+                      <div style={{ position: 'relative', display: 'flex' }} className="more-tags-trigger">
+                        <span
+                          style={{ fontSize: '0.65rem', color: theme.colors.textMuted, alignSelf: 'center', padding: '2px 4px', cursor: 'help' }}
+                        >
+                          +{c.tags.length - 2} more
+                        </span>
+                        <div className="more-tags-tooltip" style={{
+                          position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+                          background: theme.colors.surface, border: `1px solid ${theme.colors.border}`,
+                          padding: '8px', borderRadius: 6, boxShadow: theme.shadows.lg,
+                          zIndex: 100, display: 'none', gap: 4, flexWrap: 'wrap', width: 'max-content', maxWidth: 200,
+                          marginBottom: 8
+                        }}>
+                          {c.tags.slice(2).map((t, i) => <Badge key={i} variant="muted" style={{ fontSize: '0.6rem' }}>{t}</Badge>)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              },
+              {
+                id: 'page',
+                label: 'Page',
+                width: 80,
+                render: (c) => <span style={{ color: theme.colors.textMuted, fontSize: '0.9rem' }}>{c.pageRange}</span>
+              },
+              {
+                id: 'actions',
+                label: 'Actions',
+                width: 100,
+                align: 'center',
+                render: (c) => {
+                  const isSaved = c.status === 'saved'
+                  return (
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                      <Button 
+                        variant="ghost-outline" 
+                        size="sm"
+                        disabled={isSaved}
+                        onClick={() => setEditingCandidateId(c.id!)}
+                        style={{ color: theme.colors.accent, width: 32, height: 32, padding: 0 }}
+                        icon={<Pencil size={15} />}
+                      />
+                      <Button 
+                        variant="ghost-outline" 
+                        size="sm"
+                        disabled={isSaved}
+                        onClick={() => {
+                          setCandidates(prev => prev.filter(x => x.id !== c.id))
+                          setSelectedIds(prev => {
+                            const next = new Set(prev)
+                            next.delete(c.id!)
+                            return next
+                          })
+                        }}
+                        style={{ color: theme.colors.danger, width: 32, height: 32, padding: 0 }}
+                        icon={<Trash2 size={15} />}
+                      />
+                    </div>
+                  )
+                }
+              }
+            ]}
+            data={candidates.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
+            selectedIds={selectedIds}
+            onSelectIds={(ids: any) => setSelectedIds(ids)}
+            getRowId={(c) => c.id!}
+          />
+
+          {/* Pagination Controls */}
+          {candidates.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: '0.8rem', color: theme.colors.textMuted, fontWeight: 500 }}>Records per page:</span>
+                <div style={{ width: 68 }}>
+                  <Select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value))
+                      setCurrentPage(1)
+                    }}
+                    options={[{ value: 10, label: '10' }, { value: 20, label: '20' }, { value: 50, label: '50' }, { value: 100, label: '100' }]}
+                    style={{ padding: '4px 28px 4px 10px', fontSize: '0.8rem', height: 'auto' }}
+                  />
+                </div>
+              </div>
+              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            </div>
+          )}
         </div>
       )}
       </div>
@@ -460,223 +612,208 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
           <ArrowUp size={24} strokeWidth={2.5} />
         </button>
       )}
+      </div>
+
+      {/* DRAWER */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        right: editingCandidateId ? 0 : -450,
+        width: 450,
+        height: '100%',
+        background: theme.colors.surface,
+        borderLeft: `1px solid ${theme.colors.border}`,
+        boxShadow: theme.shadows.lg,
+        transition: 'right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        zIndex: 50,
+      }}>
+        {editingCandidateId && (
+          <EditDrawer 
+            key={editingCandidateId}
+            candidate={candidates.find(c => c.id === editingCandidateId)!}
+            onClose={() => setEditingCandidateId(null)}
+            onSave={(updated) => {
+              setCandidates(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c))
+              setEditingCandidateId(null)
+            }}
+          />
+        )}
+      </div>
     </div>
   )
 }
 
-function CandidateCard({ candidate, viewMode, isSelected, onToggleSelect, onUpdate, onDelete }: { 
-  candidate: Candidate, 
-  viewMode: 'grid' | 'list',
-  isSelected: boolean,
-  onToggleSelect: () => void,
-  onUpdate: (u: Partial<Candidate>) => void,
-  onDelete: () => void
+function EditDrawer({ 
+  candidate, 
+  onClose, 
+  onSave 
+}: { 
+  candidate: Candidate; 
+  onClose: () => void; 
+  onSave: (updated: Partial<Candidate>) => void;
 }) {
-  const isSaved = candidate.status === 'saved'
-  const isError = candidate.status === 'error'
+  const [type, setType] = useState(candidate.type)
+  const [title, setTitle] = useState(candidate.title)
+  const [content, setContent] = useState(candidate.content)
+  const [tags, setTags] = useState(candidate.tags.join(', '))
+  const [pageRange, setPageRange] = useState(candidate.pageRange || '')
   const [isPreview, setIsPreview] = useState(false)
 
-  const isList = viewMode === 'list'
+  const handleSave = () => {
+    onSave({
+      id: candidate.id,
+      type,
+      title,
+      content,
+      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      pageRange
+    })
+  }
 
   return (
-    <div style={{
-      background: theme.colors.surface,
-      border: `1px solid ${isSaved ? theme.colors.success : theme.colors.border}`,
-      borderRadius: 20,
-      padding: isList ? '20px 32px' : 32,
-      display: 'flex',
-      flexDirection: isList ? 'row' : 'column',
-      alignItems: isList ? 'center' : 'stretch',
-      gap: 24,
-      position: 'relative',
-      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-      opacity: isSaved ? 0.6 : 1,
-      transform: isSaved ? 'scale(0.98)' : 'none'
-    }}>
-      {isSaved && (
-        <div style={{
-          position: 'absolute', top: -12, right: 32,
-          background: theme.colors.success, color: 'white',
-          padding: '6px 16px', borderRadius: 24, fontSize: '0.75rem',
-          fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6,
-          boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
-          zIndex: 5
-        }}>
-          <CheckCircle2 size={14} /> SAVED
-        </div>
-      )}
-
-      <div style={{ flex: isList ? '0 0 240px' : 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <select 
-            value={candidate.type}
-            onChange={(e) => onUpdate({ type: e.target.value })}
-            disabled={isSaved}
-            style={{
-              background: `${TYPE_COLORS[candidate.type] || theme.colors.accent}22`,
-              color: TYPE_COLORS[candidate.type] || theme.colors.accent,
-              border: `1px solid ${TYPE_COLORS[candidate.type] || theme.colors.accent}44`,
-              borderRadius: 8,
-              padding: '4px 10px',
-              fontSize: '0.7rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              outline: 'none'
-            }}
-          >
-            {ENTRY_TYPES.map(t => (
-              <option key={t} value={t} style={{ background: theme.colors.surface, color: theme.colors.text }}>{t}</option>
-            ))}
-          </select>
-          <Badge variant="muted" style={{ padding: '4px 10px' }}>Page {candidate.pageRange}</Badge>
-        </div>
-
-        <input 
-          value={candidate.title}
-          onChange={(e) => onUpdate({ title: e.target.value })}
-          disabled={isSaved}
-          placeholder="Enter title..."
-          style={{
-            fontFamily: theme.typography.serif,
-            fontSize: isList ? '1.3rem' : '1.6rem',
-            fontWeight: 600,
-            background: 'transparent',
-            border: 'none',
-            color: theme.colors.accent,
-            width: '100%',
-            outline: 'none',
-            padding: 0
-          }}
-        />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div style={{ 
+        padding: '24px', 
+        borderBottom: `1px solid ${theme.colors.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        background: theme.colors.surface
+      }}>
+        <h3 style={{ margin: 0, fontSize: '1.2rem', color: theme.colors.text, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Pencil size={20} color={theme.colors.accent} />
+          Edit Candidate
+        </h3>
+        <Button variant="ghost" size="sm" onClick={onClose} style={{ width: 32, height: 32, padding: 0 }}>
+          <X size={18} />
+        </Button>
       </div>
-
-      <div style={{ flex: 1, position: 'relative' }}>
-        <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10, display: 'flex', gap: 4 }}>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setIsPreview(!isPreview)}
-            style={{ background: `${theme.colors.background}cc`, backdropFilter: 'blur(4px)', padding: '2px 8px', fontSize: '0.65rem', height: 24 }}
-          >
-            {isPreview ? <><Code size={12} style={{marginRight:4}}/> Edit</> : <><Eye size={12} style={{marginRight:4}}/> Preview</>}
-          </Button>
+      
+      <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: theme.colors.textMuted, marginBottom: 8, textTransform: 'uppercase' }}>
+            Type
+          </label>
+          <Select 
+            value={type}
+            onChange={e => setType(e.target.value)}
+            options={ENTRY_TYPES.map(t => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+            fullWidth
+          />
         </div>
 
-        {isPreview ? (
-          <div style={{
-            width: '100%', fontFamily: theme.typography.sans, fontSize: '0.9rem', lineHeight: 1.7,
-            background: `${theme.colors.background}44`, border: `1px solid ${theme.colors.border}`,
-            borderRadius: 12, padding: '16px', color: theme.colors.text, minHeight: isList ? 80 : 160, maxHeight: 300, overflowY: 'auto'
-          }}>
-            <MathRenderer content={candidate.content} />
-          </div>
-        ) : (
-          <textarea 
-            value={candidate.content}
-            onChange={(e) => onUpdate({ content: e.target.value })}
-            disabled={isSaved}
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: theme.colors.textMuted, marginBottom: 8, textTransform: 'uppercase' }}>
+            Title
+          </label>
+          <input 
+            value={title}
+            onChange={e => setTitle(e.target.value)}
             style={{
-              width: '100%', fontFamily: theme.typography.sans, fontSize: '0.9rem', lineHeight: 1.7,
-              background: `${theme.colors.background}44`, border: `1px solid ${theme.colors.border}`,
-              borderRadius: 12, padding: '16px', color: theme.colors.text, minHeight: isList ? 80 : 160, maxHeight: 300, resize: 'vertical', outline: 'none'
+              width: '100%', padding: '10px 14px', borderRadius: 8,
+              background: theme.colors.background, border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.text, outline: 'none', fontFamily: theme.typography.sans
             }}
           />
-        )}
+        </div>
 
-        <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: theme.colors.textMuted, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', width: 80 }}>
-              <Tag size={14} /> Tags
-            </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
-              {candidate.tags.map((t, idx) => (
-                <Badge key={idx} variant="solid" style={{ gap: 4, paddingRight: 4 }}>
-                  {t}
-                  {!isSaved && <span onClick={() => onUpdate({ tags: candidate.tags.filter(x => x !== t) })} style={{ cursor: 'pointer' }}><X size={10} /></span>}
-                </Badge>
-              ))}
-              {!isSaved && (
-                <input 
-                  placeholder="+ Tag"
-                  onKeyDown={e => { if (e.key === 'Enter' && e.currentTarget.value.trim()) { onUpdate({ tags: [...candidate.tags, e.currentTarget.value.trim()] }); e.currentTarget.value = '' }}}
-                  style={{ background: 'transparent', border: `1px dashed ${theme.colors.border}`, borderRadius: 8, padding: '2px 8px', fontSize: '0.7rem', color: theme.colors.text, width: 70, outline: 'none' }}
-                />
-              )}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: theme.colors.textMuted, textTransform: 'uppercase' }}>
+              Content (Supports Math & Markdown)
+            </label>
+            <div style={{ display: 'flex', background: theme.colors.background, padding: 2, borderRadius: 6, border: `1px solid ${theme.colors.border}` }}>
+              <button 
+                onClick={() => setIsPreview(false)}
+                style={{ 
+                  background: !isPreview ? theme.colors.surface : 'transparent',
+                  color: !isPreview ? theme.colors.text : theme.colors.textMuted,
+                  border: 'none', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', transition: 'all 0.2s'
+                }}
+              >
+                <Code size={14} /> Edit
+              </button>
+              <button 
+                onClick={() => setIsPreview(true)}
+                style={{ 
+                  background: isPreview ? theme.colors.surface : 'transparent',
+                  color: isPreview ? theme.colors.text : theme.colors.textMuted,
+                  border: 'none', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', transition: 'all 0.2s'
+                }}
+              >
+                <Eye size={14} /> Preview
+              </button>
             </div>
           </div>
+          {isPreview ? (
+            <div style={{
+              width: '100%', padding: '12px 14px', borderRadius: 8,
+              background: theme.colors.background, border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.text, minHeight: 150, fontSize: '0.9rem', lineHeight: 1.6,
+              overflowY: 'auto', maxHeight: 300
+            }}>
+              <MathRenderer content={content || 'No content provided.'} />
+            </div>
+          ) : (
+            <textarea 
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              style={{
+                width: '100%', padding: '12px 14px', borderRadius: 8,
+                background: theme.colors.background, border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.text, outline: 'none', fontFamily: theme.typography.mono,
+                minHeight: 150, resize: 'vertical', fontSize: '0.9rem', lineHeight: 1.6
+              }}
+            />
+          )}
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: theme.colors.textMuted, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', width: 80 }}>
-              <Key size={14} /> Keys
-            </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
-              {candidate.keywords.map((k, idx) => (
-                <Badge key={idx} style={{ background: `${theme.colors.accent}11`, color: theme.colors.accent, borderColor: `${theme.colors.accent}33`, gap: 4, paddingRight: 4 }}>
-                  {k}
-                  {!isSaved && <span onClick={() => onUpdate({ keywords: candidate.keywords.filter(x => x !== k) })} style={{ cursor: 'pointer' }}><X size={10} /></span>}
-                </Badge>
-              ))}
-              {!isSaved && (
-                <input 
-                  placeholder="+ Key"
-                  onKeyDown={e => { if (e.key === 'Enter' && e.currentTarget.value.trim()) { onUpdate({ keywords: [...candidate.keywords, e.currentTarget.value.trim()] }); e.currentTarget.value = '' }}}
-                  style={{ background: 'transparent', border: `1px dashed ${theme.colors.border}`, borderRadius: 8, padding: '2px 8px', fontSize: '0.7rem', color: theme.colors.text, width: 70, outline: 'none' }}
-                />
-              )}
-            </div>
-          </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: theme.colors.textMuted, marginBottom: 8, textTransform: 'uppercase' }}>
+            Tags (Comma Separated)
+          </label>
+          <input 
+            value={tags}
+            onChange={e => setTags(e.target.value)}
+            style={{
+              width: '100%', padding: '10px 14px', borderRadius: 8,
+              background: theme.colors.background, border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.text, outline: 'none', fontFamily: theme.typography.sans
+            }}
+          />
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: theme.colors.textMuted, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', width: 80 }}>
-              <Link2 size={14} /> Relations
-            </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
-              {candidate.relations.map((r, idx) => (
-                <Badge key={idx} style={{ background: `${theme.colors.success}11`, color: theme.colors.success, borderColor: `${theme.colors.success}33`, gap: 4, paddingRight: 4 }}>
-                  {r}
-                  {!isSaved && <span onClick={() => onUpdate({ relations: candidate.relations.filter(x => x !== r) })} style={{ cursor: 'pointer' }}><X size={10} /></span>}
-                </Badge>
-              ))}
-              {!isSaved && (
-                <input 
-                  placeholder="+ Relation (Title)"
-                  onKeyDown={e => { if (e.key === 'Enter' && e.currentTarget.value.trim()) { onUpdate({ relations: [...candidate.relations, e.currentTarget.value.trim()] }); e.currentTarget.value = '' }}}
-                  style={{ background: 'transparent', border: `1px dashed ${theme.colors.border}`, borderRadius: 8, padding: '2px 8px', fontSize: '0.7rem', color: theme.colors.text, width: 120, outline: 'none' }}
-                />
-              )}
-            </div>
-          </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: theme.colors.textMuted, marginBottom: 8, textTransform: 'uppercase' }}>
+            Page Range
+          </label>
+          <input 
+            value={pageRange}
+            onChange={e => setPageRange(e.target.value)}
+            style={{
+              width: '100%', padding: '10px 14px', borderRadius: 8,
+              background: theme.colors.background, border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.text, outline: 'none', fontFamily: theme.typography.sans
+            }}
+          />
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: isList ? 'row' : 'column', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
-        {!isSaved && (
-          <div 
-            onClick={onToggleSelect}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              border: `2px solid ${isSelected ? theme.colors.accent : theme.colors.border}`,
-              background: isSelected ? theme.colors.accent : 'transparent',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              marginBottom: isList ? 0 : 8
-            }}
-          >
-            {isSelected && <CheckCircle2 size={18} color={theme.colors.onAccent || '#000'} strokeWidth={3} />}
-          </div>
-        )}
-        <Button 
-          variant="ghost" 
-          onClick={onDelete}
-          disabled={isSaved}
-          style={{ color: theme.colors.danger, width: isList ? 44 : '100%', height: 44, padding: 0 }}
-          icon={<Trash2 size={20} />}
-        />
+      <div style={{ 
+        padding: '24px', 
+        borderTop: `1px solid ${theme.colors.border}`,
+        background: theme.colors.surface,
+        display: 'flex',
+        gap: 12
+      }}>
+        <Button variant="gold" fullWidth onClick={onClose} style={{ height: 44 }}>
+          Cancel
+        </Button>
+        <Button variant="gold" fullWidth onClick={handleSave} icon={<Save size={18} />} style={{ height: 44 }}>
+          Save Changes
+        </Button>
       </div>
     </div>
   )

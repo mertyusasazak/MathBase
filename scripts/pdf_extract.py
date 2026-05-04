@@ -69,7 +69,7 @@ def extract_candidates(pdf_path):
                     "title": detected_title,
                     "ref_id": ref_id, # Temporary field for relation mapping
                     "content": "",
-                    "tags": [detected_type],
+                    "tags": [],
                     "keywords": [],
                     "relations": [],
                     "sourceTitle": filename,
