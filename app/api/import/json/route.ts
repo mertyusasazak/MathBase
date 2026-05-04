@@ -66,8 +66,17 @@ export async function POST(req: NextRequest) {
         }
         
         if (existing) {
+          await prisma.source.update({
+            where: { id: existing.id },
+            data: {
+              filepath: s.filepath || '',
+              pageRange: s.pageRange || '',
+              bibInfo: s.bibInfo || '',
+              isDeleted: Boolean(s.isDeleted),
+            }
+          })
           sourceMap.set(s.id, existing.id)
-          skipped++
+          imported++
         } else {
           const created = await prisma.source.create({
             data: {
@@ -98,13 +107,28 @@ export async function POST(req: NextRequest) {
           })
         }
 
-        if (existing) {
-          entryMap.set(e.id, existing.id)
-          skipped++
-        } else {
-          // Source map güncellemesi
-          const newSourceId = e.sourceId ? sourceMap.get(e.sourceId) || null : null
+        const newSourceId = e.sourceId ? sourceMap.get(e.sourceId) || null : null
 
+        if (existing) {
+          // Üzerine yaz ve updatedAt'i şu anki zamana çek
+          await prisma.entry.update({
+            where: { id: existing.id },
+            data: {
+              content: e.content || '',
+              tags: Array.isArray(e.tags) ? JSON.stringify(e.tags) : '[]',
+              refs: Array.isArray(e.refs) ? JSON.stringify(e.refs) : '[]',
+              symbolKeywords: Array.isArray(e.symbolKeywords) ? JSON.stringify(e.symbolKeywords) : '[]',
+              sourceId: newSourceId,
+              pageRange: e.pageRange || '',
+              versionNote: e.versionNote || 'JSON Import Update',
+              isDeleted: Boolean(e.isDeleted),
+              updatedAt: new Date(), // Her zaman güncellendiğini belirt
+            }
+          })
+          entryMap.set(e.id, existing.id)
+          imported++
+        } else {
+          // Yeni oluştur
           const created = await prisma.entry.create({
             data: {
               type: e.type,
@@ -118,7 +142,7 @@ export async function POST(req: NextRequest) {
               versionNote: e.versionNote || 'JSON Import',
               isDeleted: Boolean(e.isDeleted),
               createdAt: e.createdAt ? new Date(e.createdAt) : undefined,
-              updatedAt: e.updatedAt ? new Date(e.updatedAt) : undefined,
+              updatedAt: new Date(), // Her zaman güncellendiğini belirt
             }
           })
           entryMap.set(e.id, created.id)

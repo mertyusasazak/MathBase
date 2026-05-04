@@ -28,15 +28,38 @@ export async function GET(req: NextRequest) {
 
   const entries = raw.map(parseEntry)
 
-  // Resolve titles for references
-  const allRefIds = Array.from(new Set(entries.flatMap(e => e.refs)))
-  const refEntries = await prisma.entry.findMany({
-    where: { id: { in: allRefIds } },
+  // 1. Resolve relations
+  const entryIds = entries.map(e => e.id)
+  const allRelations = await prisma.relation.findMany({
+    where: {
+      OR: [
+        { fromEntryId: { in: entryIds } },
+        { toEntryId: { in: entryIds } }
+      ]
+    }
+  })
+
+  // 2. Resolve titles for references and relations
+  const allRefIds = entries.flatMap(e => e.refs)
+  const relationIds = allRelations.flatMap(r => [r.fromEntryId, r.toEntryId])
+  const uniqueInvolvedIds = Array.from(new Set([...allRefIds, ...relationIds]))
+  
+  const involvedEntries = await prisma.entry.findMany({
+    where: { id: { in: uniqueInvolvedIds } },
     select: { id: true, title: true }
   })
-  const titleMap = Object.fromEntries(refEntries.map(r => [r.id, r.title]))
+  const titleMap = Object.fromEntries(involvedEntries.map(r => [r.id, r.title]))
 
-  // Resolve sources
+  // 3. Map relations per entry
+  const relationsMap: Record<number, { outgoing: any[], incoming: any[] }> = {}
+  entries.forEach(e => {
+    relationsMap[e.id] = {
+      outgoing: allRelations.filter(r => r.fromEntryId === e.id),
+      incoming: allRelations.filter(r => r.toEntryId === e.id)
+    }
+  })
+
+  // 4. Resolve sources
   const allSourceIds = Array.from(new Set(entries.map(e => e.sourceId).filter(Boolean))) as number[]
   const sources = await prisma.source.findMany({
     where: { id: { in: allSourceIds } },
@@ -58,11 +81,19 @@ export async function GET(req: NextRequest) {
   // 3. PDF Export
   if (format === 'pdf') {
     try {
-      const pdfBuffer = await generatePDF(entries, titleMap, sourceMap, accentColor, theme)
+      const pdfBuffer = await generatePDF(entries, titleMap, sourceMap, relationsMap, accentColor, theme)
+      const dateStr = new Date().toISOString().slice(0, 10)
+      
+      let filename = `mathbase-export-${dateStr}.pdf`
+      if (ids && entries.length === 1) {
+        const safeTitle = entries[0].title.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+        filename = `${safeTitle}-${dateStr}.pdf`
+      }
+
       return new NextResponse(Buffer.from(pdfBuffer), {
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="mathbase-export-${new Date().toISOString().slice(0, 10)}.pdf"`
+          'Content-Disposition': `attachment; filename="${filename}"`
         }
       })
     } catch (error) {
@@ -134,7 +165,14 @@ function processMarkdown(text: string): string {
     .replace(/\n/g, '<br/>')
 }
 
-async function generatePDF(entries: any[], titleMap: Record<number, string>, sourceMap: Record<number, string>, accentColor: string, theme: string): Promise<Uint8Array> {
+async function generatePDF(
+  entries: any[], 
+  titleMap: Record<number, string>, 
+  sourceMap: Record<number, string>, 
+  relationsMap: Record<number, { outgoing: any[], incoming: any[] }>,
+  accentColor: string, 
+  theme: string
+): Promise<Uint8Array> {
   const isDark = theme === 'dark';
   const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -232,13 +270,21 @@ async function generatePDF(entries: any[], titleMap: Record<number, string>, sou
             </div>
           ` : ''}
 
-          ${entry.refs.length > 0 ? `
+          ${entry.refs.length > 0 || (relationsMap[entry.id] && (relationsMap[entry.id].outgoing.length > 0 || relationsMap[entry.id].incoming.length > 0)) ? `
             <div style="margin-bottom: 12px;">
-              <div class="meta-label">Related Components</div>
-              <div>${entry.refs
-                .filter((rId: number) => titleMap[rId]) // Filter out orphan references (Ghost Entries)
-                .map((rId: number) => `<div class="relation">• ${titleMap[rId]}</div>`)
-                .join('')}</div>
+              <div class="meta-label">Relationships</div>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                ${entry.refs
+                  .filter((rId: number) => titleMap[rId])
+                  .map((rId: number) => `<div class="relation">• [Legacy Ref] ${titleMap[rId]}</div>`)
+                  .join('')}
+                ${relationsMap[entry.id].outgoing.map(r => `
+                  <div class="relation">• <span style="font-weight: bold;">${r.relationType.replace('_', ' ')}:</span> ${titleMap[r.toEntryId] || 'Unknown'}</div>
+                `).join('')}
+                ${relationsMap[entry.id].incoming.map(r => `
+                  <div class="relation">• <span style="font-weight: bold;">referenced by (${r.relationType.replace('_', ' ')}):</span> ${titleMap[r.fromEntryId] || 'Unknown'}</div>
+                `).join('')}
+              </div>
             </div>
           ` : ''}
 

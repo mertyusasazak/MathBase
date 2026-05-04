@@ -112,7 +112,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-      <div 
+      <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
         style={{ flex: 1, overflowY: 'auto', position: 'relative' }}
@@ -182,10 +182,10 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                       onMouseEnter={e => e.currentTarget.style.background = theme.colors.surfaceHover}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      Export as PDF (Entry)
+                      Export as PDF
                     </div>
                     <div
-                      onClick={() => { window.open('/api/export/json', '_self'); setShowExportMenu(false); }}
+                      onClick={() => { window.open(`/api/export/json?id=${selected.id}`, '_self'); setShowExportMenu(false); }}
                       style={{
                         padding: '10px 16px', fontSize: '0.85rem', cursor: 'pointer', color: theme.colors.text,
                         borderTop: `1px solid ${theme.colors.border}`, transition: 'background 0.2s'
@@ -193,7 +193,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                       onMouseEnter={e => e.currentTarget.style.background = theme.colors.surfaceHover}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      Export as JSON (Full Backup)
+                      Export as JSON
                     </div>
                   </div>
                 </>
@@ -320,8 +320,8 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
             <div
               onClick={() => {
                 if (!src.filepath) return
-                const url = src.filepath.startsWith('http') 
-                  ? src.filepath 
+                const url = src.filepath.startsWith('http')
+                  ? src.filepath
                   : `${window.location.origin}/${src.filepath.replace(/^\/+/, '')}`
                 window.open(url, '_blank')
               }}
@@ -471,7 +471,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
           </div>
         </div>
       </div>
-      
+
       {/* BACK TO TOP BUTTON */}
       {showScrollTop && (
         <button
@@ -502,7 +502,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
       )}
 
       {/* NOTES SIDEBAR */}
-      <div 
+      <div
         ref={notesSidebarRef}
         style={{
           width: 340,
@@ -527,9 +527,9 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {saveStatus === 'saving' && <RotateCcw size={12} className="spin" color={theme.colors.textMuted} />}
             {saveStatus === 'saved' && <CheckCircle2 size={12} color={theme.colors.success} />}
-            <Button 
-              variant={isEditingNotes ? "gold" : "outline"} 
-              size="sm" 
+            <Button
+              variant={isEditingNotes ? "gold" : "outline"}
+              size="sm"
               onClick={() => setIsEditingNotes(!isEditingNotes)}
               style={{ fontSize: '0.65rem', padding: '2px 8px' }}
             >
@@ -560,7 +560,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
               }}
             />
           ) : (
-            <div 
+            <div
               onClick={() => setIsEditingNotes(true)}
               style={{ padding: '20px', cursor: 'text', minHeight: '100%' }}
             >

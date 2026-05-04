@@ -1,7 +1,9 @@
 'use client'
 
 import React from 'react'
-import { Pencil, Trash2, Library, Filter, ArrowUp } from 'lucide-react'
+import { Pencil, Trash2, Library, Filter, ArrowUp, FileText } from 'lucide-react'
+import { exportToPDF } from '@/components/features/pdf/PDFExport'
+import { useAppContext, THEME_COLORS } from '@/lib/context/AppContext'
 import { Button, Badge, Select } from '@/components/ui/Common'
 import Pagination from '@/components/ui/Pagination'
 import FilterBar from '@/components/ui/FilterBar'
@@ -51,6 +53,9 @@ export const EntriesView: React.FC<EntriesViewProps> = (props) => {
   const allTags = [...new Set(entries.flatMap(e => e.tags))].sort()
   const allTitles = [...new Set(entries.map(e => e.title))].sort()
   const ENTRY_TYPES = ['definition', 'theorem', 'lemma', 'corollary', 'example', 'remark']
+  
+  const { state: { themeMode, accentColor } } = useAppContext()
+  const [showExportMenu, setShowExportMenu] = React.useState(false)
 
   const [showScrollTop, setShowScrollTop] = React.useState(false)
   const scrollContainerRef = React.useRef<HTMLDivElement>(null)
@@ -155,6 +160,60 @@ export const EntriesView: React.FC<EntriesViewProps> = (props) => {
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: '0.9rem', color: theme.colors.textMuted }}>{entries.length} records</span>
+          
+          <div style={{ position: 'relative' }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              icon={<FileText size={14} />}
+            >
+              Export All
+            </Button>
+            {showExportMenu && (
+              <>
+                <div
+                  style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}
+                  onClick={() => setShowExportMenu(false)}
+                />
+                <div style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 110,
+                  background: theme.colors.surface, border: `1px solid ${theme.colors.border}`,
+                  borderRadius: 12, padding: '8px 0', minWidth: 160, boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                  animation: 'fadeIn 0.2s ease-out', overflow: 'hidden'
+                }}>
+                  <div
+                    onClick={() => {
+                      const colors = THEME_COLORS[accentColor]
+                      const hex = themeMode === 'dark' ? colors.dark : colors.light
+                      exportToPDF(entries, hex, themeMode);
+                      setShowExportMenu(false);
+                    }}
+                    style={{
+                      padding: '10px 16px', fontSize: '0.85rem', cursor: 'pointer', color: theme.colors.text,
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = theme.colors.surfaceHover}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    Export All as PDF
+                  </div>
+                  <div
+                    onClick={() => { window.open('/api/export/json', '_self'); setShowExportMenu(false); }}
+                    style={{
+                      padding: '10px 16px', fontSize: '0.85rem', cursor: 'pointer', color: theme.colors.text,
+                      borderTop: `1px solid ${theme.colors.border}`, transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = theme.colors.surfaceHover}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    Export All as JSON
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
           {selectedIds.size > 0 && (
             <Button variant="danger" onClick={onBulkDelete} icon={<Trash2 size={16} />}>
               Delete ({selectedIds.size})
