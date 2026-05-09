@@ -20,7 +20,8 @@ def extract_candidates(pdf_path):
     # Regex patterns for identifying blocks
     patterns = [
         r"(Definition|Theorem|Lemma|Example|Corollary|Proposition|Remark|Note)\s+(\d+\.?\d*\.?\d*)\s*([\w\s]*)",
-        r"(Definition|Theorem|Lemma|Example|Corollary|Proposition|Remark|Note):\s*([\w\s]*)"
+        r"(Definition|Theorem|Lemma|Example|Corollary|Proposition|Remark|Note):\s*([\w\s]*)",
+        r"^(Definition|Theorem|Lemma|Example|Corollary|Proposition|Remark|Note)$"
     ]
     
     # Type mapping to align with app standard ENTRY_TYPES
@@ -57,9 +58,6 @@ def extract_candidates(pdf_path):
                     elif len(match.groups()) >= 2:
                         detected_title = match.group(2).strip()
                     
-                    if not detected_title:
-                        detected_title = f"{detected_type.capitalize()} {ref_id}" if ref_id else detected_type.capitalize()
-                    
                     is_header = True
                     break
             
@@ -73,10 +71,38 @@ def extract_candidates(pdf_path):
                     "keywords": [],
                     "relations": [],
                     "sourceTitle": filename,
-                    "pageRange": str(page_num + 1)
+                    "pageRange": str(page_num + 1),
+                    "expect_title": not detected_title # Internal flag
                 })
             elif candidates:
-                candidates[-1]["content"] += line + " "
+                # If we hit a metadata header, stop capturing content for this block
+                stop_words = ["TAGS", "KEYWORDS", "RELATIONSHIPS", "SOURCE:"]
+                if any(line.upper().startswith(sw) for sw in stop_words):
+                    candidates[-1]["expect_title"] = False # Stop looking for title if any
+                    # We can't actually "stop" the elif from hitting for next lines, 
+                    # but we can mark this candidate as "closed"
+                    candidates[-1]["closed"] = True
+                    continue
+                
+                if candidates[-1].get("closed"):
+                    continue
+
+                # If we were expecting a title for this candidate, take this line ONLY if it's short
+                if candidates[-1].get("expect_title"):
+                    if len(line) < 100 and not line.endswith('.'):
+                        candidates[-1]["title"] = line
+                    candidates[-1]["expect_title"] = False
+                else:
+                    candidates[-1]["content"] += line + " "
+
+    # Clean up internal flags
+    for c in candidates:
+        if "expect_title" in c:
+            del c["expect_title"]
+        if "closed" in c:
+            del c["closed"]
+        if not c["title"]:
+            c["title"] = c["type"].capitalize()
 
     # Post-processing: Tags, Keywords, and Relations
     for i, c in enumerate(candidates):
@@ -97,45 +123,43 @@ def extract_candidates(pdf_path):
         
         c["keywords"] = list(set(latex_symbols + capitalized))[:8] # Limit to 8 keywords
         
-        # 3. Automatic Relation Detection
-        for other in candidates:
-            if other == c: continue
-            
-            is_related = False
-            
-            # A. Internal Cross-references (Explicit: e.g., "Theorem 1.2")
-            if other["ref_id"]:
-                search_term = rf"{other['type']}\s+{re.escape(other['ref_id'])}"
-                if re.search(search_term, c["content"], re.IGNORECASE):
-                    is_related = True
-            
-            # B. Title Mention (Implicit: e.g., "Heine-Borel Theorem")
-            if not is_related and len(other["title"]) > 5:
-                if other["title"].lower() in c["content"].lower():
-                    is_related = True
-            
-            # C. Shared Tags (at least 2 common tags)
-            if not is_related:
-                common_tags = set(c["tags"]) & set(other["tags"])
-                if len(common_tags) >= 2:
-                    is_related = True
-            
-            # D. Shared Keywords (at least 2 common keywords)
-            if not is_related:
-                common_keys = set(c["keywords"]) & set(other["keywords"])
-                if len(common_keys) >= 2:
-                    is_related = True
-            
-            if is_related:
-                if other["title"] not in c["relations"]:
-                    c["relations"].append(other["title"])
+        # 3. Automatic Relation Detection REMOVED (Handled by API for better accuracy)
+        pass
 
     # Clean up and remove temporary fields
     for c in candidates:
         content = c["content"].strip()
+        # DEBUG: Print snippet of content to see what was extracted
+        # print(f"DEBUG: Candidate {c['title']} start: {content[:100]}...", file=sys.stderr)
         
-        # 4. Math Cleaning & Normalization
-        # Fix common PDF extraction ligatures
+        # 4. Check for embedded MathBase metadata (Lossless Re-import)
+        # Our export tool embeds Base64 encoded JSON metadata in [MB_B64]...[MB_END]
+        import base64
+        # Be loose with whitespace around markers
+        mb_match = re.search(r"\[\s*MB_B64\s*\](.*?)\s*\[\s*MB_END\s*\]", content, re.DOTALL | re.IGNORECASE)
+        if mb_match:
+            try:
+                # CRITICAL: Strip ALL whitespace (spaces, newlines) that PyMuPDF might have injected
+                b64_str = re.sub(r"\s+", "", mb_match.group(1))
+                decoded = base64.b64decode(b64_str).decode('utf-8')
+                meta = json.loads(decoded)
+                
+                c["content"] = meta.get("content", c["content"])
+                c["type"] = meta.get("type", c["type"])
+                c["tags"] = meta.get("tags", c["tags"])
+                # Ensure relations match the structured format
+                c["relations"] = meta.get("relations", [])
+                for rel in c["relations"]:
+                    if "confidence" not in rel:
+                        rel["confidence"] = 1.0
+            except Exception as e:
+                pass
+            
+            if "expect_title" in c:
+                del c["expect_title"]
+            continue
+
+        # 5. Math Cleaning & Normalization (Heuristic for generic PDFs)
         ligatures = {
             '\uf001': 'fi', '\uf002': 'fl', '\uf003': 'ff', '\uf004': 'ffi', '\uf005': 'ffl',
             'ﬁ': 'fi', 'ﬂ': 'fl', 'ﬀ': 'ff', 'ﬃ': 'ffi', 'ﬄ': 'ffl'

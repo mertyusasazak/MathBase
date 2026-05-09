@@ -45,7 +45,10 @@ export async function GET(req: NextRequest) {
   const uniqueInvolvedIds = Array.from(new Set([...allRefIds, ...relationIds]))
   
   const involvedEntries = await prisma.entry.findMany({
-    where: { id: { in: uniqueInvolvedIds } },
+    where: { 
+      id: { in: uniqueInvolvedIds },
+      isDeleted: false 
+    },
     select: { id: true, title: true }
   })
   const titleMap = Object.fromEntries(involvedEntries.map(r => [r.id, r.title]))
@@ -188,10 +191,10 @@ async function generatePDF(
             inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
             displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']]
           },
-          svg: { fontCache: 'global' }
+          chtml: { displayAlign: 'left' }
         };
       </script>
-      <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+      <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
       <style>
         @page { margin: 0; }
         
@@ -247,12 +250,29 @@ async function generatePDF(
   entries.forEach((entry) => {
     const typeClass = entry.type.substring(0, 3).toLowerCase() + '-color';
     const processedContent = processMarkdown(entry.content);
+    
+    // Comprehensive Metadata for perfect re-import
+    const metadata = {
+      content: entry.content,
+      type: entry.type,
+      tags: entry.tags,
+      relations: [
+        ...entry.refs.filter((rId: number) => titleMap[rId]).map((rId: number) => ({ toEntryId: rId, toTitle: titleMap[rId], relationType: 'related_to' })),
+        ...relationsMap[entry.id].outgoing.map(r => ({ toEntryId: r.toEntryId, toTitle: titleMap[r.toEntryId] || 'Unknown', relationType: r.relationType }))
+      ]
+    };
+    // Base64 encoding to prevent PDF text mangling
+    const encodedData = Buffer.from(JSON.stringify(metadata)).toString('base64');
+    // Using tiny font and background-matching color to ensure it's in the text layer but invisible
+    const hiddenSource = `<div style="font-size:1px; line-height:0; color:${isDark ? '#0d0e12' : '#ffffff'}; opacity:0.01; height:1px; overflow:hidden;">[MB_B64]${encodedData}[MB_END]</div>`;
+    
     const sourceTitle = entry.sourceId ? sourceMap[entry.sourceId] : null;
 
     htmlContent += `
       <div class="entry">
         <span class="type-badge ${typeClass}">${entry.type}</span>
         <h2 class="title">${entry.title}</h2>
+        ${hiddenSource}
         <div class="content">${processedContent}</div>
         
         <div class="metadata-section">
@@ -276,12 +296,14 @@ async function generatePDF(
               <div style="display: flex; flex-direction: column; gap: 4px;">
                 ${entry.refs
                   .filter((rId: number) => titleMap[rId])
-                  .map((rId: number) => `<div class="relation">• [Legacy Ref] ${titleMap[rId]}</div>`)
+                  .map((rId: number) => `<div class="relation">• ${titleMap[rId]}</div>`)
                   .join('')}
                 ${relationsMap[entry.id].outgoing.map(r => `
                   <div class="relation">• <span style="font-weight: bold;">${r.relationType.replace('_', ' ')}:</span> ${titleMap[r.toEntryId] || 'Unknown'}</div>
                 `).join('')}
-                ${relationsMap[entry.id].incoming.map(r => `
+                ${relationsMap[entry.id].incoming
+                  .filter(r => titleMap[r.fromEntryId]) // Only show if the source entry exists and isn't deleted
+                  .map(r => `
                   <div class="relation">• <span style="font-weight: bold;">referenced by (${r.relationType.replace('_', ' ')}):</span> ${titleMap[r.fromEntryId] || 'Unknown'}</div>
                 `).join('')}
               </div>

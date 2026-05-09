@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 // POST /api/entry - Yeni entry oluştur
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { type, title, content, tags, refs, relationData, versionNote, sourceId, pageRange } = body
+  const { type, title, content, tags, refs, relationData, relations, versionNote, sourceId, pageRange } = body
 
   if (!title || !type) {
     return NextResponse.json({ error: 'title and type are required' }, { status: 400 })
@@ -65,6 +65,30 @@ export async function POST(req: NextRequest) {
           createdBy: 'user'
         }
       })
+    }
+  }
+
+  // Structured Relations (e.g. from Smart Import)
+  if (relations && Array.isArray(relations)) {
+    for (const rel of relations) {
+      const targetId = rel.toEntryId
+      if (!targetId || targetId === entry.id) continue
+
+      const exists = await prisma.relation.findFirst({
+        where: { fromEntryId: entry.id, toEntryId: targetId }
+      })
+
+      if (!exists) {
+        await prisma.relation.create({
+          data: {
+            fromEntryId: entry.id,
+            toEntryId: targetId,
+            relationType: rel.relationType || 'related_to',
+            confidence: rel.confidence || 1.0,
+            createdBy: 'system'
+          }
+        })
+      }
     }
   }
 

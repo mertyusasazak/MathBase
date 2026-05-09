@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import {
   FileText, CheckCircle2, Loader2, Save,
-  Trash2, Sparkles, ArrowUp, FileJson, Pencil, X, Eye, Code
+  Trash2, Sparkles, ArrowUp, FileJson, Pencil, X, Eye, Code, Link as LinkIcon
 } from 'lucide-react'
 import { Button, Badge, Select } from '@/components/ui/Common'
 import Pagination from '@/components/ui/Pagination'
@@ -174,7 +174,7 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
           manualKeywords: candidate.keywords,
           sourceId: sid,
           pageRange: candidate.pageRange,
-          relationTitles: candidate.relations
+          relations: candidate.relations
         })
       })
       if (!res.ok) throw new Error('Save failed')
@@ -221,6 +221,7 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
     }
 
     if (candidates.length > 0 || file || jsonRestoreData) {
+      setEditingCandidateId(null)
       setCandidates([])
       setFile(null)
       setSelectedIds(new Set())
@@ -485,8 +486,15 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
                     label: 'Title',
                     width: '25%',
                     render: (c) => (
-                      <div style={{ fontWeight: 600, color: theme.colors.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220 }}>
-                        {c.title}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ fontWeight: 600, color: theme.colors.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220 }}>
+                          {c.title}
+                        </div>
+                        {c.relations && c.relations.length > 0 && (
+                          <div title={`${c.relations.length} suggestions`} style={{ color: theme.colors.accent, display: 'flex' }}>
+                            <LinkIcon size={14} />
+                          </div>
+                        )}
                       </div>
                     )
                   },
@@ -648,17 +656,21 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
         transition: 'right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         zIndex: 50,
       }}>
-        {editingCandidateId && (
-          <EditDrawer
-            key={editingCandidateId}
-            candidate={candidates.find(c => c.id === editingCandidateId)!}
-            onClose={() => setEditingCandidateId(null)}
-            onSave={(updated) => {
-              setCandidates(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c))
-              setEditingCandidateId(null)
-            }}
-          />
-        )}
+        {editingCandidateId && (() => {
+          const editingCandidate = candidates.find(c => c.id === editingCandidateId)
+          if (!editingCandidate) return null
+          return (
+            <EditDrawer
+              key={editingCandidateId}
+              candidate={editingCandidate}
+              onClose={() => setEditingCandidateId(null)}
+              onSave={(updated) => {
+                setCandidates(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c))
+                setEditingCandidateId(null)
+              }}
+            />
+          )
+        })()}
       </div>
     </div>
   )
@@ -678,6 +690,7 @@ function EditDrawer({
   const [content, setContent] = useState(candidate.content)
   const [tags, setTags] = useState(candidate.tags.join(', '))
   const [pageRange, setPageRange] = useState(candidate.pageRange || '')
+  const [relations, setRelations] = useState(candidate.relations || [])
   const [isPreview, setIsPreview] = useState(false)
 
   const handleSave = () => {
@@ -687,7 +700,8 @@ function EditDrawer({
       title,
       content,
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-      pageRange
+      pageRange,
+      relations
     })
   }
 
@@ -820,6 +834,38 @@ function EditDrawer({
             }}
           />
         </div>
+
+        {relations.length > 0 && (
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: theme.colors.textMuted, marginBottom: 8, textTransform: 'uppercase' }}>
+              Suggested Relations
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {relations.map((rel: any, idx: number) => (
+                <div key={idx} style={{ 
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 12px', borderRadius: 8, background: theme.colors.background,
+                  border: `1px solid ${theme.colors.border}`
+                }}>
+                  <div style={{ fontSize: '0.85rem' }}>
+                    <span style={{ color: theme.colors.accent, fontWeight: 600 }}>{rel.toTitle}</span>
+                    <div style={{ fontSize: '0.7rem', color: theme.colors.textMuted }}>
+                      Confidence: {(rel.confidence * 100).toFixed(0)}% • {rel.relationType}
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setRelations(prev => prev.filter((_, i) => i !== idx))}
+                    style={{ width: 28, height: 28, padding: 0, color: theme.colors.danger }}
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{
