@@ -56,6 +56,11 @@
   --glass-border: rgba(0, 0, 0, 0.05);
 }
 
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   background-color: var(--bg);
   color: var(--text);
@@ -63,6 +68,7 @@ body {
   margin: 0;
   font-family: 'Instrument Sans', sans-serif;
   height: 100%;
+  overflow: hidden;
 }
 
 * {
@@ -102,6 +108,14 @@ button:hover {
 .katex-display {
   text-align: left !important;
   margin: 1em 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+
+/* Prevent inline katex from causing horizontal scroll */
+.katex {
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
 }

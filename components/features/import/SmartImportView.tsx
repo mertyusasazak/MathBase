@@ -44,6 +44,7 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [jsonRestoreData, setJsonRestoreData] = useState<any>(null)
   const requestIdRef = React.useRef<number>(0)
+  const sourceIdRef  = React.useRef<number | null>(null)  // stable ref to avoid duplicate creates
   const scrollContainerRef = React.useRef<HTMLDivElement>(null)
   const { actions } = useAppContext()
 
@@ -132,37 +133,53 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
     setCandidates(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c))
   }
 
-  const ensureSourceCreated = async () => {
-    if (sourceId) return sourceId
+  const ensureSourceCreated = async (): Promise<number | null> => {
+    // Return cached id from ref (survives React batching)
+    if (sourceIdRef.current) return sourceIdRef.current
+    if (sourceId) {
+      sourceIdRef.current = sourceId
+      return sourceId
+    }
     if (!file) return null
 
     try {
+      const maxPage = candidates.length > 0
+        ? Math.max(...candidates.map((x: any) => parseInt(x.pageRange) || 0))
+        : 1
       const res = await fetch('/api/sources', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: file.name,
+          title: file.name.replace(/\.pdf$/i, ''),
           sourceType: 'pdf',
           filepath: `/uploads/${file.name}`,
-          pageRange: `1-${candidates.length > 0 ? Math.max(...candidates.map((x: any) => parseInt(x.pageRange) || 0)) : 1}`
+          pageRange: `1-${maxPage}`
         })
       })
       if (res.ok) {
         const data = await res.json()
-        setSourceId(data.id)
+        sourceIdRef.current = data.id   // store in ref immediately
+        setSourceId(data.id)            // also update state for display
         return data.id
       }
     } catch (err) {
-      console.error('Lazy source creation failed:', err)
+      console.error('Source creation failed:', err)
     }
     return null
   }
 
-  const handleSaveOne = async (candidate: Candidate) => {
+  // sid is passed explicitly so we never call ensureSourceCreated inside a loop
+  // Returns the saved DB entry id (or null on error) for phase-2 relation resolution
+  const handleSaveOne = async (candidate: Candidate, sid: number | null): Promise<number | null> => {
     handleUpdateCandidate(candidate.id!, { status: 'pending' })
-    const sid = await ensureSourceCreated()
 
     try {
+      // Only pass library relations (toEntryId != null) in the initial POST.
+      // Cross-candidate relations (toCandidateIdx) are resolved in phase 2.
+      const libraryRelations = (candidate.relations || []).filter(
+        (r: any) => r.toEntryId != null
+      )
+
       const res = await fetch('/api/entry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -174,30 +191,88 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
           manualKeywords: candidate.keywords,
           sourceId: sid,
           pageRange: candidate.pageRange,
-          relations: candidate.relations
+          relations: libraryRelations
         })
       })
       if (!res.ok) throw new Error('Save failed')
+      const saved = await res.json()
       handleUpdateCandidate(candidate.id!, { status: 'saved' })
       actions.refreshAll()
+      return saved.id as number
     } catch (err) {
       handleUpdateCandidate(candidate.id!, { status: 'error' })
+      return null
+    }
+  }
+
+  // Phase 2: after all entries are saved, resolve cross-candidate relations
+  const resolveAndSaveCrossRelations = async (
+    savedBatch: Candidate[],
+    dbIds: (number | null)[]
+  ) => {
+    // Build candidateIdx → dbId map (using the original candidates array index)
+    const idxToDbId: Map<number, number> = new Map()
+    savedBatch.forEach((c, i) => {
+      const dbId = dbIds[i]
+      if (dbId == null) return
+      // Find the index of this candidate in the full candidates array
+      const globalIdx = candidates.findIndex(x => x.id === c.id)
+      if (globalIdx >= 0) idxToDbId.set(globalIdx, dbId)
+    })
+
+    for (let i = 0; i < savedBatch.length; i++) {
+      const c = savedBatch[i]
+      const fromId = dbIds[i]
+      if (fromId == null) continue
+
+      const crossRels = (c.relations || []).filter(
+        (r: any) => r.toEntryId == null && r.toCandidateIdx != null
+      )
+
+      for (const rel of crossRels) {
+        const toId = idxToDbId.get(rel.toCandidateIdx)
+        if (!toId || toId === fromId) continue
+
+        try {
+          await fetch('/api/relations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fromEntryId: fromId,
+              toEntryId: toId,
+              relationType: rel.relationType || 'related_to',
+              confidence: rel.confidence || 0.7,
+              createdBy: 'system'
+            })
+          })
+        } catch (err) {
+          console.error('Failed to save cross-relation:', err)
+        }
+      }
     }
   }
 
   const handleSaveSelected = async () => {
     const toSave = candidates.filter(c => selectedIds.has(c.id!) && c.status === 'pending')
-    for (const c of toSave) {
-      await handleSaveOne(c)
-    }
+    if (toSave.length === 0) return
+    // Phase 1: create source once, save all entries
+    const sid = await ensureSourceCreated()
+    const dbIds = await Promise.all(toSave.map(c => handleSaveOne(c, sid)))
+    // Phase 2: resolve & save cross-candidate relations
+    await resolveAndSaveCrossRelations(toSave, dbIds)
+    actions.refreshAll()
     setSelectedIds(new Set())
   }
 
   const handleSaveAll = async () => {
     const pending = candidates.filter(c => c.status === 'pending')
-    for (const c of pending) {
-      await handleSaveOne(c)
-    }
+    if (pending.length === 0) return
+    // Phase 1: create source once, save all entries
+    const sid = await ensureSourceCreated()
+    const dbIds = await Promise.all(pending.map(c => handleSaveOne(c, sid)))
+    // Phase 2: resolve & save cross-candidate relations
+    await resolveAndSaveCrossRelations(pending, dbIds)
+    actions.refreshAll()
     onComplete()
   }
 
@@ -227,6 +302,7 @@ export default function SmartImportView({ onClose, onComplete }: Props) {
       setSelectedIds(new Set())
       setJsonRestoreData(null)
       setSourceId(null)
+      sourceIdRef.current = null   // reset the ref too
     } else {
       onClose()
     }

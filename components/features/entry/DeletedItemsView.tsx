@@ -8,7 +8,7 @@ import FilterBar from '@/components/ui/FilterBar'
 import { theme } from '@/lib/core/theme'
 import { renderTitle } from '@/lib/core/math'
 import { DeletedItem } from '@/types'
-import { TYPE_COLORS, SOURCE_TYPE_COLORS } from '@/lib/core/constants'
+import { TYPE_COLORS, SOURCE_TYPE_COLORS, ENTRY_TYPES } from '@/lib/core/constants'
 import { DataTable, Column } from '@/components/ui/DataTable'
 
 interface DeletedItemsViewProps {
@@ -50,7 +50,7 @@ export const DeletedItemsView: React.FC<DeletedItemsViewProps> = (props) => {
 
   const allTags = [...new Set(items.flatMap(e => e.tags || []))].sort()
   const allTitles = [...new Set(items.map(e => e.title || ''))].sort()
-  const ENTRY_TYPES = ['definition', 'theorem', 'lemma', 'corollary', 'example', 'remark']
+  
 
   const getDeletedKey = (item: DeletedItem) => `${item.deletedItemType}-${item.id}`
 

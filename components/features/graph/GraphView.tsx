@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import * as d3 from 'd3'
 import { Entry, Relation } from '@/types'
 import { theme } from '@/lib/core/theme'
-import { RELATION_LABELS, INVERSE_RELATION_LABELS } from '@/lib/core/constants'
+import { RELATION_LABELS, INVERSE_RELATION_LABELS, TYPE_COLORS, ENTRY_TYPES } from '@/lib/core/constants'
 import { useAppContext } from '@/lib/context/AppContext'
 
 
@@ -16,13 +16,18 @@ interface Props {
   relations?: Relation[]
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  definition: '#6b8fcc',
-  theorem: '#c96b6b',
-  lemma: '#8fcc8f',
-  corollary: '#cc6ba8',
-  example: '#cc9f6b',
-  remark: '#a06bcc'
+// Type shape families for graph nodes
+const TYPE_SHAPE: Record<string, 'circle' | 'diamond' | 'square' | 'triangle'> = {
+  definition: 'circle',
+  theorem:    'circle',
+  lemma:      'circle',
+  corollary:  'circle',
+  example:    'triangle',
+  remark:     'triangle',
+  algorithm:  'square',
+  proof:      'square',
+  axiom:      'diamond',
+  assumption: 'diamond',
 }
 
 const RELATION_COLORS: Record<string, string> = {
@@ -325,11 +330,46 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
           })
       )
 
-    node.append('circle')
-      .attr('r', (d: any) => 10 + d.refCount * 4)
-      .attr('fill', (d: any) => TYPE_COLORS[d.type] + (d.id === selectedId ? 'ff' : '88'))
-      .attr('stroke', (d: any) => d.id === selectedId ? TYPE_COLORS[d.type] : 'transparent')
-      .attr('stroke-width', 3)
+    // ── Node shapes by type family ─────────────────────────────────────────
+    node.each(function(d: any) {
+      const el = d3.select(this)
+      const r = 10 + d.refCount * 4
+      const color = TYPE_COLORS[d.type] || theme.colors.accent
+      const isSelected = d.id === selectedId
+      const fillOpacity = isSelected ? 'ff' : '88'
+      const shape = TYPE_SHAPE[d.type] || 'circle'
+
+      if (shape === 'circle') {
+        el.append('circle')
+          .attr('r', r)
+          .attr('fill', color + fillOpacity)
+          .attr('stroke', isSelected ? color : 'transparent')
+          .attr('stroke-width', 3)
+      } else if (shape === 'square') {
+        const s = r * 1.5
+        el.append('rect')
+          .attr('x', -s / 2).attr('y', -s / 2)
+          .attr('width', s).attr('height', s)
+          .attr('rx', 4).attr('ry', 4)
+          .attr('fill', color + fillOpacity)
+          .attr('stroke', isSelected ? color : 'transparent')
+          .attr('stroke-width', 3)
+      } else if (shape === 'diamond') {
+        const s = r * 1.6
+        el.append('polygon')
+          .attr('points', `0,${-s} ${s},0 0,${s} ${-s},0`)
+          .attr('fill', color + fillOpacity)
+          .attr('stroke', isSelected ? color : 'transparent')
+          .attr('stroke-width', 3)
+      } else if (shape === 'triangle') {
+        const s = r * 1.5
+        el.append('polygon')
+          .attr('points', `0,${-s} ${s * 0.87},${s * 0.5} ${-s * 0.87},${s * 0.5}`)
+          .attr('fill', color + fillOpacity)
+          .attr('stroke', isSelected ? color : 'transparent')
+          .attr('stroke-width', 3)
+      }
+    })
 
     node.append('text')
       .text((d: any) => d.title.length > 18 ? d.title.slice(0, 16) + '…' : d.title)
@@ -414,17 +454,28 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
     return () => { simulation.stop() }
   }, [entries, resetKey, relations, hiddenTypes, activeIncoming, activeOutgoing, selectedId])
 
-  // Update selected node colors
+  // Update selected node highlight
   useEffect(() => {
     if (!svgRef.current) return
-    d3.select(svgRef.current)
-      .selectAll('circle')
-      .attr('fill', function (d: any) {
-        return TYPE_COLORS[d.type] + (d.id === selectedId ? 'ff' : '88')
-      })
-      .attr('stroke', function (d: any) {
-        return d.id === selectedId ? TYPE_COLORS[d.type] : 'transparent'
-      })
+    const svg = d3.select(svgRef.current)
+    // Circles
+    svg.selectAll('circle').attr('fill', function(d: any) {
+      return (TYPE_COLORS[d.type] || theme.colors.accent) + (d.id === selectedId ? 'ff' : '88')
+    }).attr('stroke', function(d: any) {
+      return d.id === selectedId ? (TYPE_COLORS[d.type] || theme.colors.accent) : 'transparent'
+    })
+    // Rects (squares)
+    svg.selectAll('rect').attr('fill', function(d: any) {
+      return (TYPE_COLORS[d.type] || theme.colors.accent) + (d.id === selectedId ? 'ff' : '88')
+    }).attr('stroke', function(d: any) {
+      return d.id === selectedId ? (TYPE_COLORS[d.type] || theme.colors.accent) : 'transparent'
+    })
+    // Polygons (diamonds + triangles)
+    svg.selectAll('polygon').attr('fill', function(d: any) {
+      return (TYPE_COLORS[d.type] || theme.colors.accent) + (d.id === selectedId ? 'ff' : '88')
+    }).attr('stroke', function(d: any) {
+      return d.id === selectedId ? (TYPE_COLORS[d.type] || theme.colors.accent) : 'transparent'
+    })
   }, [selectedId])
 
   return (
@@ -433,24 +484,31 @@ export default function GraphView({ entries, selectedId, onSelect, relations = [
         position: 'absolute', top: 12, left: 12, zIndex: 10,
         display: 'flex', flexWrap: 'wrap', gap: 5
       }}>
-        {Object.entries(TYPE_COLORS).map(([type, color]) => (
-          <span
-            key={type}
-            onClick={() => toggleType(type)}
-            style={{
-              fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.62rem',
-              padding: '2px 8px', borderRadius: 20,
-              background: hiddenTypes.has(type) ? theme.colors.surface : color + '22',
-              color: hiddenTypes.has(type) ? theme.colors.textMuted : color,
-              border: `1px solid ${hiddenTypes.has(type) ? theme.colors.border : color + '44'}`,
-              cursor: 'pointer',
-              opacity: hiddenTypes.has(type) ? 0.5 : 1,
-              transition: 'all 0.2s'
-            }}
-          >
-            {type}
-          </span>
-        ))}
+        {ENTRY_TYPES.map((type) => {
+          const color = TYPE_COLORS[type] || theme.colors.accent
+          const shape = TYPE_SHAPE[type] || 'circle'
+          const shapeIcon = shape === 'circle' ? '●' : shape === 'square' ? '■' : shape === 'diamond' ? '◆' : '▲'
+          return (
+            <span
+              key={type}
+              onClick={() => toggleType(type)}
+              style={{
+                fontFamily: 'Instrument Sans, sans-serif', fontSize: '0.62rem',
+                padding: '2px 8px', borderRadius: 20,
+                background: hiddenTypes.has(type) ? theme.colors.surface : color + '22',
+                color: hiddenTypes.has(type) ? theme.colors.textMuted : color,
+                border: `1px solid ${hiddenTypes.has(type) ? theme.colors.border : color + '44'}`,
+                cursor: 'pointer',
+                opacity: hiddenTypes.has(type) ? 0.5 : 1,
+                transition: 'all 0.2s',
+                display: 'flex', alignItems: 'center', gap: 4
+              }}
+            >
+              <span style={{ fontSize: '0.55rem' }}>{shapeIcon}</span>
+              {type}
+            </span>
+          )
+        })}
       </div>
 
       {/* Relation type legend */}

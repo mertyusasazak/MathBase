@@ -111,11 +111,11 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
   }
 
   return (
-    <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minWidth: 0 }}>  
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        style={{ flex: 1, overflowY: 'auto', position: 'relative' }}
+        style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative', minWidth: 0 }}
       >
         {/* HEADER */}
         <div style={{
@@ -360,7 +360,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
             </div>
           )}
 
-          <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: 22, marginBottom: 32 }}>
+          <div style={{ borderTop: `1px solid ${theme.colors.border}`, paddingTop: 22, marginBottom: 32, overflowX: 'auto', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             <MathRenderer content={selected.content} />
           </div>
 
@@ -506,11 +506,13 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
         ref={notesSidebarRef}
         style={{
           width: 340,
+          flexShrink: 0,
           borderLeft: `1px solid ${theme.colors.border}`,
           background: theme.colors.surface,
           display: 'flex',
           flexDirection: 'column',
-          animation: 'slideInRight 0.3s ease-out'
+          animation: 'slideInRight 0.3s ease-out',
+          overflow: 'hidden'
         }}
       >
         <div style={{

@@ -76,64 +76,153 @@ export async function POST(req: NextRequest) {
 
     const typeFamilies: Record<string, string> = {
       theorem: 'theory', lemma: 'theory', corollary: 'theory',
-      definition: 'foundation', axiom: 'foundation',
-      example: 'illustration', remark: 'illustration'
+      definition: 'foundation', axiom: 'foundation', assumption: 'foundation',
+      example: 'illustration', remark: 'illustration',
+      algorithm: 'procedure', proof: 'procedure',
     }
 
+    // Generic title words that shouldn't count as meaningful matches
     const EXCLUDED_TITLES = new Set([
-      'definition', 'theorem', 'lemma', 'corollary', 'example', 
-      'proposition', 'remark', 'note', 'proof', 'axiom'
+      'definition', 'theorem', 'lemma', 'corollary', 'example',
+      'proposition', 'remark', 'note', 'proof', 'axiom',
+      'algorithm', 'assumption', 'observation', 'claim',
     ])
 
-    const processedResults = (results as any[]).map(candidate => {
+    // Infer the most likely relationType based on the candidate + target type
+    function inferRelationType(fromType: string, toType: string): string {
+      if (fromType === 'proof') return 'proof_depends_on'
+      if (fromType === 'example') return 'example_of'
+      if (toType === 'definition') return 'uses'
+      if (toType === 'example') return 'example_of'
+      if (fromType === 'corollary' && (toType === 'theorem' || toType === 'lemma')) return 'proof_depends_on'
+      return 'related_to'
+    }
+
+    // Extract a bare number from a title like "Lemma 11" → "11", "3 - Degrees" → "3"
+    function extractNumber(title: string): string | null {
+      const m = title.match(/\b(\d+)\b/)
+      return m ? m[1] : null
+    }
+
+    // Build a searchable title index for all candidates (for cross-matching)
+    const candidateList = results as any[]
+    const candidateTitleIndex = candidateList.map((c: any, i: number) => ({
+      title:     c.title || '',
+      normTitle: (c.title || '').toLowerCase().trim(),
+      number:    extractNumber((c.title || '').toLowerCase()),
+      type:      c.type || '',
+      tags:      c.tags || [],
+      idx:       i
+    })).filter(x => x.normTitle.length > 3 && !EXCLUDED_TITLES.has(x.normTitle))
+
+    const processedResults = candidateList.map((candidate: any, selfIdx: number) => {
       const suggestions: any[] = []
-      const cTags = candidate.tags || []
-      const cTitle = (candidate.title || '').toLowerCase()
-      
-      existingEntries.forEach(entry => {
-        let confidence = 0
-        const eTitle = (entry.title || '').toLowerCase()
-        const eContent = (entry.content || '').toLowerCase()
-        
-        // 0. Same Title: +0.8 (Very strong)
-        const isExcluded = EXCLUDED_TITLES.has(cTitle) || EXCLUDED_TITLES.has(eTitle)
-        if (!isExcluded && cTitle === eTitle && cTitle.length > 3) confidence += 0.8
+      const cTags: string[]   = candidate.tags || []
+      const cTitle: string    = (candidate.title || '').toLowerCase().trim()
+      const cContent: string  = (candidate.content || '').toLowerCase()
+      const cIsExcluded       = EXCLUDED_TITLES.has(cTitle) || cTitle.length <= 3
 
-        // 1. Same tag: +0.3
-        const hasCommonTag = cTags.some((t: string) => entry.tags.includes(t))
-        if (hasCommonTag) confidence += 0.3
+      // ── Phase 1: Cross-candidate suggestions (same PDF) ──────────────────
+      candidateTitleIndex.forEach(({ title, normTitle, number, type: targetType, tags: otherTags, idx }) => {
+        if (idx === selfIdx) return
+        let score = 0
 
-        // 2. Title mention: +0.5
-        const titleMentioned = !isExcluded && (
-          (eContent.includes(cTitle) && cTitle.length > 3) || 
-          (candidate.content.toLowerCase().includes(eTitle) && eTitle.length > 3)
-        )
-        if (titleMentioned) confidence += 0.5
+        // 1a. Exact title mention in content (e.g. content contains "lemma 11")
+        if (normTitle.length > 3 && cContent.includes(normTitle)) score += 0.65
 
-        // 3. Same type family: +0.1
-        if (typeFamilies[candidate.type] && typeFamilies[candidate.type] === typeFamilies[entry.type]) {
-          confidence += 0.1
+        // 1b. Number-aware mention: title = "Lemma 11" → search for "lemma 11", "lem. 11", "lem 11"
+        if (number) {
+          const typeWord = targetType.substring(0, 3)  // "lem", "the", "def", "alg", "cor"
+          if (
+            cContent.includes(`${targetType} ${number}`) ||      // "lemma 11"
+            cContent.includes(`${typeWord}. ${number}`) ||        // "lem. 11"
+            cContent.includes(`${typeWord} ${number}`) ||         // "lem 11"
+            cContent.match(new RegExp(`\\b${number}\\b`))         // bare number in context
+          ) {
+            score += 0.4
+          }
         }
 
-        // Threshold: confidence >= 0.5
-        if (confidence >= 0.5) {
+        // 1c. Proof → immediately preceding lemma/theorem (very strong signal in academic papers)
+        if (candidate.type === 'proof' && idx === selfIdx - 1 &&
+            (targetType === 'lemma' || targetType === 'theorem' || targetType === 'corollary')) {
+          score += 0.8
+        }
+
+        // 1d. Shared tags (same domain = likely related)
+        const sharedTags = cTags.filter((t: string) => otherTags.includes(t))
+        if (sharedTags.length >= 2) score += 0.25
+        else if (sharedTags.length === 1) score += 0.1
+
+        // 1e. Same type family
+        const fA = typeFamilies[candidate.type]
+        const fB = typeFamilies[targetType]
+        if (fA && fA === fB) score += 0.05
+
+        // Lower threshold for same-document matches (they're almost certainly related)
+        if (score >= 0.35) {
+          if (!suggestions.some(s => s._candidateIdx === idx)) {
+            suggestions.push({
+              _candidateIdx: idx,
+              toEntryId: null,
+              toCandidateIdx: idx,
+              toTitle: title,
+              relationType: inferRelationType(candidate.type, targetType),
+              confidence: Math.min(score, 1.0),
+              source: 'candidate'
+            })
+          }
+        }
+      })
+
+      // ── Phase 2: Library entry suggestions (existing DB entries) ─────────
+      existingEntries.forEach((entry: any) => {
+        const eTitle      = (entry.title || '').toLowerCase().trim()
+        const eContent    = (entry.content || '').toLowerCase()
+        const eIsExcluded = EXCLUDED_TITLES.has(eTitle) || eTitle.length <= 3
+        let score = 0
+
+        // Candidate content mentions existing entry title
+        if (!eIsExcluded && eTitle.length > 3 && cContent.includes(eTitle)) score += 0.6
+
+        // Existing entry content mentions this candidate's title
+        if (!cIsExcluded && cTitle.length > 3 && eContent.includes(cTitle)) score += 0.5
+
+        // Shared tags
+        const sharedTags = cTags.filter((t: string) => entry.tags.includes(t))
+        if (sharedTags.length >= 2) score += 0.3
+        else if (sharedTags.length === 1) score += 0.15
+
+        // Same type family
+        const fA = typeFamilies[candidate.type]
+        const fB = typeFamilies[entry.type]
+        if (fA && fB && fA === fB) score += 0.05
+
+        if (score >= 0.5) {
           suggestions.push({
             toEntryId: entry.id,
             toTitle: entry.title,
-            relationType: 'related_to',
-            confidence: Math.min(confidence, 1.0)
+            relationType: inferRelationType(candidate.type, entry.type),
+            confidence: Math.min(score, 1.0),
+            source: 'library'
           })
         }
       })
 
-      console.log(`Candidate "${candidate.title}" suggested relations:`, suggestions.length)
+      // Sort by confidence desc, keep top 8
+      const topSuggestions = suggestions
+        .map(({ _candidateIdx, ...rest }) => rest)
+        .sort((a: any, b: any) => b.confidence - a.confidence)
+        .slice(0, 8)
+
       return {
         ...candidate,
-        relations: suggestions
+        relations: topSuggestions
       }
     })
 
     return NextResponse.json(processedResults)
+
   } catch (error: any) {
     console.error('Import Error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })

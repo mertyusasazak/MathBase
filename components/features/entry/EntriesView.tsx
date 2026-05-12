@@ -10,7 +10,7 @@ import FilterBar from '@/components/ui/FilterBar'
 import { theme } from '@/lib/core/theme'
 import { renderTitle } from '@/lib/core/math'
 import { Entry } from '@/types'
-import { TYPE_COLORS } from '@/lib/core/constants'
+import { TYPE_COLORS, ENTRY_TYPES } from '@/lib/core/constants'
 import { DataTable, Column } from '@/components/ui/DataTable'
 
 interface EntriesViewProps {
@@ -52,7 +52,7 @@ export const EntriesView: React.FC<EntriesViewProps> = (props) => {
 
   const allTags = [...new Set(entries.flatMap(e => e.tags))].sort()
   const allTitles = [...new Set(entries.map(e => e.title))].sort()
-  const ENTRY_TYPES = ['definition', 'theorem', 'lemma', 'corollary', 'example', 'remark']
+  
   
   const { state: { themeMode, accentColor } } = useAppContext()
   const [showExportMenu, setShowExportMenu] = React.useState(false)

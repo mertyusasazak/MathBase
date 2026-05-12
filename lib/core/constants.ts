@@ -1,10 +1,14 @@
 export const TYPE_COLORS: Record<string, string> = {
   definition: '#6b8fcc',
-  theorem: '#c96b6b',
-  lemma: '#8fcc8f',
-  corollary: '#cc6ba8',
-  example: '#cc9f6b',
-  remark: '#a06bcc',
+  theorem:    '#c96b6b',
+  lemma:      '#8fcc8f',
+  corollary:  '#cc6ba8',
+  example:    '#cc9f6b',
+  remark:     '#a06bcc',
+  algorithm:  '#4db8c4',
+  proof:      '#8a8a8a',
+  axiom:      '#c4944d',
+  assumption: '#7aaa7a',
   source: 'var(--source)'
 }
 
@@ -19,7 +23,10 @@ export const SOURCE_TYPE_COLORS: Record<string, string> = {
   source: 'var(--source)'
 }
 
-export const ENTRY_TYPES = ['definition', 'theorem', 'lemma', 'corollary', 'example', 'remark']
+export const ENTRY_TYPES = [
+  'definition', 'theorem', 'lemma', 'corollary', 'example', 'remark',
+  'algorithm', 'proof', 'axiom', 'assumption'
+]
 
 export const RELATION_LABELS: Record<string, string> = {
   uses: 'Uses',
