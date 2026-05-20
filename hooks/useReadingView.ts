@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Entry, Relation } from '@/types'
-import { RELATION_LABELS } from '@/lib/core/constants'
+import { RELATION_LABELS, INVERSE_RELATION_LABELS } from '@/lib/core/constants'
 
 interface ReadingViewLogicProps {
   selected: Entry
@@ -19,16 +19,6 @@ export function useReadingView({
 }: ReadingViewLogicProps) {
   const [expandKeywords, setExpandKeywords] = useState(false)
 
-  // Inverse labels for incoming relations
-  const INVERSE_LABELS: Record<string, string> = {
-    uses: 'Used By',
-    example_of: 'Instances / Examples',
-    generalizes: 'Generalized By',
-    proof_depends_on: 'Proof Base for',
-    related_to: 'Related (Incoming)',
-    contrasts_with: 'Contrasted By'
-  }
-
   // Memoized relation processing
   const { outgoing, incoming } = useMemo(() => {
     const rawOut = relations.filter(r => r.fromEntryId === selected.id)
@@ -41,7 +31,7 @@ export function useReadingView({
 
     const incoming = rawIn.map(r => {
       const e = entries.find(x => x.id === r.fromEntryId)
-      return e ? { entry: e, rel: INVERSE_LABELS[r.relationType] || r.relationType } : null
+      return e ? { entry: e, rel: INVERSE_RELATION_LABELS[r.relationType] || r.relationType } : null
     }).filter(Boolean) as { entry: Entry; rel: string }[]
 
     return { outgoing, incoming }

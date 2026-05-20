@@ -4,7 +4,7 @@ import React from 'react'
 import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
 import { Entry, SourceOption, EntryOption, Relation } from '@/types'
-import { Trash2, X, Save, AlertTriangle, ChevronDown, ChevronUp, Link2, Tag, FileText, HelpCircle } from 'lucide-react'
+import { Trash2, X, Save, ChevronDown, ChevronUp, Link2, FileText, HelpCircle, Tag } from 'lucide-react'
 import { theme } from '@/lib/core/theme'
 import { Button, Input, Select, Badge } from '@/components/ui/Common'
 import { renderTitle } from '@/lib/core/math'
@@ -90,10 +90,33 @@ export default function EntryEditor(props: Props) {
     if (refs.editorRef.current) {
       const editor = refs.editorRef.current
       const selection = editor.getSelection()
-      if (selection) {
+      const model = editor.getModel()
+      if (selection && model) {
+        // Get character before selection
+        const startLine = selection.startLineNumber
+        const startCol = selection.startColumn
+        const startLineContent = model.getLineContent(startLine)
+        const charBefore = startCol > 1 ? startLineContent.charAt(startCol - 2) : ''
+
+        // Get character after selection
+        const endLine = selection.endLineNumber
+        const endCol = selection.endColumn
+        const endLineContent = model.getLineContent(endLine)
+        const charAfter = endCol <= endLineContent.length ? endLineContent.charAt(endCol - 1) : ''
+
+        let textToInsert = code
+        // If there's a character before and it's not a whitespace, add a space
+        if (charBefore && charBefore !== ' ' && charBefore !== '\t') {
+          textToInsert = ' ' + textToInsert
+        }
+        // If there's a character after and it's not a whitespace, add a space
+        if (charAfter && charAfter !== ' ' && charAfter !== '\t') {
+          textToInsert = textToInsert + ' '
+        }
+
         editor.executeEdits('math-guide', [{
           range: selection,
-          text: code,
+          text: textToInsert,
           forceMoveMarkers: true
         }])
         editor.focus()
@@ -192,21 +215,6 @@ export default function EntryEditor(props: Props) {
 
         {/* Combined Scroll Area (Now strictly flex, internal areas scroll) */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Duplicate Warning */}
-          {state.duplicates.length > 0 && (
-            <div style={{ padding: '12px 20px', background: '#ffa50011', borderBottom: `1px solid #ffa50044`, display: 'flex', gap: 12, alignItems: 'center' }}>
-              <AlertTriangle size={18} color="#ffa500" />
-              <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '0.8rem', color: '#ffa500', fontWeight: 600 }}>Similar entries already exist:</span>
-                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                  {state.duplicates.slice(0, 2).map(d => (
-                    <Badge key={d.id} variant="outline" style={{ fontSize: '0.7rem', borderColor: '#ffa50033', color: '#ffa500cc' }}>{d.title} ({d.type})</Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Monaco Editor Container - Stretches to fill gap */}
           <div ref={refs.editorContainerRef} style={{
             flex: 2,
@@ -325,7 +333,7 @@ export default function EntryEditor(props: Props) {
               onToggle={actions.toggleSection}
               summary={state.refs.length + ' links'}
             >
-              {/* Search Bar Row with AI Suggest Inside */}
+              {/* Search Bar Row for linking entries */}
               <div style={{
                 display: 'flex',
                 gap: 10,

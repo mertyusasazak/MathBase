@@ -116,6 +116,10 @@ function generateLaTeX(entries: any[]): string {
     corollary: 'corollary',
     example: 'example',
     remark: 'remark',
+    algorithm: 'algorithm',
+    proof: 'proof',
+    axiom: 'axiom',
+    assumption: 'assumption',
   }
 
   const blocks = entries.map(e => {
@@ -146,6 +150,9 @@ function generateLaTeX(entries: any[]): string {
 \\newtheorem{theorem}{Theorem}
 \\newtheorem{lemma}[theorem]{Lemma}
 \\newtheorem{corollary}[theorem]{Corollary}
+\\newtheorem{algorithm}[theorem]{Algorithm}
+\\newtheorem{axiom}[theorem]{Axiom}
+\\newtheorem{assumption}[theorem]{Assumption}
 \\theoremstyle{definition}
 \\newtheorem{definition}[theorem]{Definition}
 \\newtheorem{example}[theorem]{Example}
@@ -237,6 +244,10 @@ async function generatePDF(
         .cor-color { color: ${isDark ? '#fbb6ce' : '#702459'}; border-color: ${isDark ? '#702459' : '#fbb6ce'}; background: ${isDark ? '#521b41' : '#fff5f7'}; }
         .exa-color { color: ${isDark ? '#fbd38d' : '#744210'}; border-color: ${isDark ? '#744210' : '#fbd38d'}; background: ${isDark ? '#5f370e' : '#fffaf0'}; }
         .rem-color { color: ${isDark ? '#d6bcfa' : '#44337a'}; border-color: ${isDark ? '#44337a' : '#d6bcfa'}; background: ${isDark ? '#322659' : '#faf5ff'}; }
+        .alg-color { color: ${isDark ? '#81e6d9' : '#134e4a'}; border-color: ${isDark ? '#134e4a' : '#81e6d9'}; background: ${isDark ? '#0f3d3e' : '#e6fffa'}; }
+        .pro-color { color: ${isDark ? '#cbd5e1' : '#334155'}; border-color: ${isDark ? '#475569' : '#cbd5e1'}; background: ${isDark ? '#1e293b' : '#f1f5f9'}; }
+        .axi-color { color: ${isDark ? '#ffaf66' : '#9c4221'}; border-color: ${isDark ? '#5c2411' : '#ffcd9b'}; background: ${isDark ? '#3d160a' : '#fffaf5'}; }
+        .ass-color { color: ${isDark ? '#a7f3d0' : '#065f46'}; border-color: ${isDark ? '#064e3b' : '#a7f3d0'}; background: ${isDark ? '#022c22' : '#ecfdf5'}; }
       </style>
     </head>
     <body>

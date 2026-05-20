@@ -53,7 +53,6 @@ export function useEntryEditor({
   // Layout state
   const [leftWidth, setLeftWidth] = useState(50)
   const [isResizing, setIsResizing] = useState(false)
-  const [duplicates, setDuplicates] = useState<any[]>([])
   const [versionNote, setVersionNote] = useState('')
   
   const editorRef = useRef<any>(null)
@@ -66,12 +65,6 @@ export function useEntryEditor({
     tags: false,
     relations: false
   })
-
-  useEffect(() => {
-    // Duplicate detection was removed with AI features.
-    setDuplicates([])
-  }, [title])
-
 
   const toggleSection = (id: string) => {
     setOpenSections(prev => ({ ...prev, [id]: !prev[id as keyof typeof prev] }))
@@ -158,7 +151,7 @@ export function useEntryEditor({
       type, title, content, tags, sourceId, pageRange,
       refs, refRelations, saving,
       refSearch, activeRelType, isRefSearchOpen, dropdownPosition, dropdownRect,
-      leftWidth, isResizing, duplicates, versionNote, openSections
+      leftWidth, isResizing, versionNote, openSections
     },
     refs: {
       editorRef, editorContainerRef, searchContainerRef, containerRef

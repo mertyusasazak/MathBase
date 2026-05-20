@@ -1,76 +1,92 @@
-# ∂ MathBase - Intelligence-First Mathematical Knowledge Repository
+# ∂ MathBase - Mathematical Knowledge Repository
 
-MathBase is an AI-enhanced knowledge management system specifically designed for researchers, students, and mathematicians. It allows you to store, connect, and explore mathematical concepts with full LaTeX support and an interactive structural graph.
+MathBase is an advanced knowledge management system designed for researchers, academics, and students in mathematics. It enables users to store, interconnect, and visualize mathematical concepts with full LaTeX support and an interactive structural graph.
 
 ![Next.js](https://img.shields.io/badge/Next.js-14.2.5-black?style=for-the-badge&logo=next.js)
 ![Prisma](https://img.shields.io/badge/Prisma-5.16-2D3748?style=for-the-badge&logo=prisma)
-![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)
+![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
-## 🚀 Getting Started
+---
 
-### Prerequisites
+## 🌟 Core Features
 
-- **Node.js** (v18 or higher)
-
-### Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/mertyusasazak/MathBase.git
-   cd MathBase
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Initialize the Database**:
-   ```bash
-   npx prisma generate
-   npx prisma db push
-   ```
-
-4. **Run the Development Server**:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000) to see the result.
+*   **Rich Mathematical Notation (LaTeX & Markdown)**: Flawlessly renders both inline (e.g. `$ ... $`) and block (e.g. `$$ ... $$`) mathematical formulas using [KaTeX](https://katex.org/). Features a Monaco Editor integration providing a client-side live rendering preview.
+*   **Structured Mathematical Environments**: Organize entries into 10 structured, color-coded mathematical types in both the UI and PDF exports:
+    *   *Theorem*, *Lemma*, *Corollary*, *Definition*, *Axiom*, *Assumption*, *Algorithm*, *Proof*, *Example*, and *Remark*.
+*   **Interactive Structural Graph (D3.js Graph View)**: Visualizes logical relationships (such as: *"Proof of Theorem B depends on Lemma A"*, *"Uses Definition A"*, or *"Concept B generalizes Concept A"*) using an interactive, force-directed graph with comprehensive type and relation filters.
+*   **Smart PDF Import**: Import PDF research articles or lecture notes. A background Python worker (`pdf_extract.py`) extracts mathematical definitions, theorems, and proofs using PyMuPDF, then generates algorithmic relation suggestions based on text cross-mentions and keyword overlaps.
+*   **High-Quality PDF & LaTeX Export**:
+    *   **PDF Export**: Generates beautifully styled PDF compilations optimized for light and dark modes using server-side Puppeteer and MathJax. Hidden Base64 metadata is embedded directly into the generated PDFs, allowing lossless re-import of entries and their relations back into MathBase.
+    *   **LaTeX Export**: Exports collections into clean, standardized AMS-LaTeX code (`amsart` class) mapping customized environments correctly.
+*   **Version History & Commit Messages**: Keep track of content updates with version logging and commit notes, saving a clear timeline of edits.
+*   **Trash Bin & Cascade Deletion**: Deleting entries sends them to a temporary trash bin. Permanent deletion triggers cascade cleaning to preserve the database's relational integrity.
 
 ---
 
 ## 🛠 Tech Stack
 
-- **Framework**: [Next.js 14](https://nextjs.org/) (App Router)
-- **Database**: [Prisma](https://www.prisma.io/) with SQLite
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) & Vanilla CSS
-- **Math Rendering**: [KaTeX](https://katex.org/)
-- **Visuals**: [D3.js](https://d3js.org/) for the Graph View
-- **Icons**: [Lucide React](https://lucide.dev/)
+*   **Frontend & API**: Next.js 14 (App Router) & React 18
+*   **Database**: Prisma ORM with SQLite
+*   **Graph Visualization**: D3.js (Force-directed Graph)
+*   **Editor**: Monaco Editor (`@monaco-editor/react`)
+*   **Document Processing**: Python (PyMuPDF / `fitz`)
+*   **Icons**: Lucide React
 
 ---
 
-## 🇹🇷 Türkçe Özet (`Turkish Summary`)
+## 🚀 Getting Started
 
-**MathBase**, matematiksel kavramlar arasındaki ilişkileri görselleştiren ve yapay zeka ile zenginleştiren bir bilgi bankası sistemidir. 
+### 📋 Prerequisites
 
-- **KaTeX** desteği ile eksiksiz matematiksel formül yazımı.
-- **OpenRouter** entegrasyonu ile otomatik etiketleme ve referans önerileri.
-- **D3.js** tabanlı interaktif ilişki grafiği.
-- Gelişmiş filtreleme ve kategori yönetimi.
-- PDF dışa aktarma ve kaynak takibi.
+*   **Node.js**: v18.x or higher.
+*   **Python**: 3.8+ (required for the Smart PDF Import feature).
+
+### ⚙️ Installation
+
+1.  **Clone the Repository**:
+    ```bash
+    git clone https://github.com/mertyusasazak/MathBase.git
+    cd MathBase
+    ```
+
+2.  **Install Node.js Dependencies**:
+    ```bash
+    npm install
+    ```
+
+3.  **Install Python Dependencies**:
+    Install PyMuPDF to enable PDF text extraction:
+    ```bash
+    pip install pymupdf
+    ```
+
+4.  **Initialize the Database (SQLite & Prisma)**:
+    Generate the Prisma client and push the schema to local SQLite database (`prisma/mathbase.db`):
+    ```bash
+    npm run db:init
+    ```
+
+### 💻 Running the Application
+
+1.  **Start the Development Server**:
+    ```bash
+    npm run dev
+    ```
+    Once ready, open [http://localhost:3000](http://localhost:3000) in your browser to start exploring MathBase.
+
+2.  **Inspect Database visually (Prisma Studio)**:
+    If you want to browse and manage the records directly in a visual UI:
+    ```bash
+    npx prisma studio
+    ```
 
 ---
 
-## Note
+## 🎓 Academic Context
 
-Still in development.
-
----
+This project was developed as a **Capstone Project** to facilitate conceptual mapping, paper-reading, and knowledge structures in advanced mathematics and research environments.
 
 ## ⚖️ License
 
 Distributed under the MIT License. See `LICENSE` for more information.
-
-Developed as a **Capstone Project** for Academic Research.

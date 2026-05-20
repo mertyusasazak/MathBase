@@ -18,13 +18,6 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 // ─── Helper Types ────────────────────────────────────────────────────────────
 
-export type EntryType =
-  | 'definition'
-  | 'theorem'
-  | 'lemma'
-  | 'corollary'
-  | 'example'
-  | 'remark'
 
 export interface EntryRow {
   id: number

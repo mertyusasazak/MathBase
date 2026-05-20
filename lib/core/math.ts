@@ -1,4 +1,8 @@
-import 'katex/dist/katex.min.css'
+// Load KaTeX CSS only at runtime (avoid TypeScript error for side-effect import)
+if (typeof window !== 'undefined') {
+  // @ts-ignore: runtime side-effect require for CSS
+  try { require('katex/dist/katex.min.css') } catch (e) { /* ignore if not available */ }
+}
 import katex from 'katex'
 
 const SUP: Record<string, string> = {
