@@ -31,7 +31,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const {
     entries, sources, relations, deletedItems, loading,
-    handleDelete, handleRestore, handlePermanentDelete, refreshAll, loadEntries, loadSources, loadRelations, loadDeleted
+    handleDelete, handleRestore, handlePermanentDelete, refreshAll
   } = useMathBase()
 
   // Derived activeView from pathname for better routing sync
@@ -173,7 +173,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const keys = Array.from(selectedDeletedIds)
     for (const key of keys) {
       const [type, id] = key.split('-')
-      // Placeholder for actual restore logic
+      const url = type === 'source' ? `/api/sources/${id}` : `/api/entry/${id}`
+      await fetch(url, { 
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ isDeleted: false }) 
+      })
     }
     setSelectedDeletedIds(new Set())
     await refreshAll()
@@ -185,6 +190,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const keys = Array.from(selectedDeletedIds)
     for (const key of keys) {
       const [type, id] = key.split('-')
+      const url = type === 'source' ? `/api/sources/permanent/${id}` : `/api/entry/permanent/${id}`
+      await fetch(url, { method: 'DELETE' })
     }
     setSelectedDeletedIds(new Set())
     await refreshAll()

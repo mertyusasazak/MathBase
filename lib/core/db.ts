@@ -16,26 +16,8 @@ export const prisma =
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
-// ─── Helper Types ────────────────────────────────────────────────────────────
-
-
-export interface EntryRow {
-  id: number
-  type: string
-  title: string
-  content: string
-  tags: string[]      // parsed
-  refs: number[]      // parsed
-  sourceId: number | null
-  pageRange: string
-  symbolKeywords: string[]  // parsed
-  personalNotes: string
-  createdAt: Date
-  updatedAt: Date
-}
-
 // DB'den gelen raw satırı parse eder
-export function parseEntry(raw: any): EntryRow {
+export function parseEntry(raw: any) {
   return {
     ...raw,
     tags: JSON.parse(raw.tags || '[]'),
