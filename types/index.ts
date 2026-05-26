@@ -10,7 +10,6 @@ export interface Entry {
   refs: number[]; 
   createdAt: string; 
   updatedAt: string;
-  versionNote?: string; 
   sourceId?: number | null; 
   pageRange?: string; 
   pageStart?: number | null;

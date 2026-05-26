@@ -8,7 +8,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const entry = await prisma.entry.findUnique({
     where: { id },
     include: {
-      versions: { orderBy: { savedAt: 'desc' }, take: 20 },
       source: true,
     }
   })
@@ -19,13 +18,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const id = parseInt(params.id)
   const body = await req.json()
-  const { type, title, content, tags, refs, relationData, versionNote, sourceId, pageRange, isDeleted, personalNotes } = body
+  const { type, title, content, tags, refs, relationData, sourceId, pageRange, isDeleted, personalNotes } = body
 
   // Mevcut entry'i bul
   const existing = await prisma.entry.findUnique({ where: { id } })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // Fast-path for Personal Notes (skip versions/keywords)
+  // Fast-path for Personal Notes (skip keywords)
   if (personalNotes !== undefined && !type && !title && content === undefined && !tags && !refs && isDeleted === undefined) {
     try {
       const updated = await prisma.entry.update({
@@ -46,19 +45,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     })
     return NextResponse.json(parseEntry(updated))
   }
-
-  // Kaydetmeden önce versiyon oluştur
-  await prisma.entryVersion.create({
-    data: {
-      entryId: id,
-      type: existing.type,
-      title: existing.title,
-      content: existing.content,
-      tags: existing.tags,
-      refs: existing.refs,
-      note: versionNote || 'Auto-saved'
-    }
-  })
 
   // Relation senkronizasyonu
   if (refs && Array.isArray(refs)) {
@@ -111,7 +97,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       ...(content !== undefined && { content }),
       ...(tags && { tags: JSON.stringify(tags) }),
       ...(refs && { refs: JSON.stringify(refs) }),
-      ...(versionNote !== undefined && { versionNote }),
       ...(sourceId !== undefined && { sourceId: sourceId || null }),
       ...(pageRange !== undefined && { pageRange }),
       ...(isDeleted !== undefined && { isDeleted }),

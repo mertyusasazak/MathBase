@@ -9,7 +9,7 @@ export async function GET() {
             select: {
                 id: true, type: true, title: true, content: true,
                 tags: true, refs: true, createdAt: true, updatedAt: true,
-                versionNote: true, sourceId: true, pageRange: true, symbolKeywords: true,
+                sourceId: true, pageRange: true, symbolKeywords: true,
             }
         }),
         prisma.source.findMany({

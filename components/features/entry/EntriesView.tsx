@@ -117,16 +117,6 @@ export const EntriesView: React.FC<EntriesViewProps> = (props) => {
       )
     },
     {
-      id: 'commit',
-      label: 'Commit',
-      width: '20%',
-      render: (e) => (
-        <div style={{ fontSize: '0.75rem', color: theme.colors.textDim, fontStyle: 'italic', opacity: 0.8 }} title={e.versionNote || ''}>
-          {e.versionNote || '—'}
-        </div>
-      )
-    },
-    {
       id: 'updatedAt',
       label: 'Last Update',
       width: 130,

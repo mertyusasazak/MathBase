@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
     select: {
       id: true, type: true, title: true, content: true,
       tags: true, refs: true, createdAt: true, updatedAt: true,
-      versionNote: true,
       sourceId: true, pageRange: true, symbolKeywords: true, personalNotes: true,
     }
   })
@@ -31,7 +30,7 @@ export async function GET(req: NextRequest) {
 // POST /api/entry - Yeni entry oluştur
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { type, title, content, tags, refs, relationData, relations, versionNote, sourceId, pageRange } = body
+  const { type, title, content, tags, refs, relationData, relations, sourceId, pageRange } = body
 
   if (!title || !type) {
     return NextResponse.json({ error: 'title and type are required' }, { status: 400 })
@@ -48,7 +47,6 @@ export async function POST(req: NextRequest) {
       tags: JSON.stringify(tags || []),
       refs: JSON.stringify(refs || []),
       symbolKeywords: JSON.stringify(finalKeywords),
-      versionNote: versionNote || 'Initial version',
       sourceId: sourceId || null,
       pageRange: pageRange || '',
     }
@@ -138,19 +136,6 @@ export async function POST(req: NextRequest) {
       }
     }
   }
-
-  // İlk versiyonu kaydet
-  await prisma.entryVersion.create({
-    data: {
-      entryId: entry.id,
-      type: entry.type,
-      title: entry.title,
-      content: entry.content,
-      tags: entry.tags,
-      refs: entry.refs,
-      note: versionNote || 'Initial version'
-    }
-  })
 
   return NextResponse.json(parseEntry(entry), { status: 201 })
 }

@@ -144,10 +144,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSortConfig({ key, direction })
   }
 
-  const handleSave = async (entry: any, versionNote?: string) => {
+  const handleSave = async (entry: any) => {
     const method = entry.id ? 'PUT' : 'POST'
     const res = await fetch(entry.id ? `/api/entry/${entry.id}` : '/api/entry', {
-      method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...entry, versionNote })
+      method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entry)
     })
     const saved = await res.json()
     await refreshAll()

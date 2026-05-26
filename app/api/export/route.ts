@@ -70,18 +70,7 @@ export async function GET(req: NextRequest) {
   })
   const sourceMap = Object.fromEntries(sources.map(s => [s.id, s.title]))
 
-  // 2. LaTeX Export
-  if (format === 'latex') {
-    const latex = generateLaTeX(entries)
-    return new NextResponse(latex, {
-      headers: {
-        'Content-Type': 'text/plain',
-        'Content-Disposition': 'attachment; filename="mathbase-export.tex"'
-      }
-    })
-  }
-
-  // 3. PDF Export
+  // 2. PDF Export
   if (format === 'pdf') {
     try {
       const pdfBuffer = await generatePDF(entries, titleMap, sourceMap, relationsMap, accentColor, theme)
@@ -106,65 +95,6 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ error: 'Unknown format' }, { status: 400 })
-}
-
-function generateLaTeX(entries: any[]): string {
-  const typeEnvMap: Record<string, string> = {
-    definition: 'definition',
-    theorem: 'theorem',
-    lemma: 'lemma',
-    corollary: 'corollary',
-    example: 'example',
-    remark: 'remark',
-    algorithm: 'algorithm',
-    proof: 'proof',
-    axiom: 'axiom',
-    assumption: 'assumption',
-  }
-
-  const blocks = entries.map(e => {
-    const env = typeEnvMap[e.type] || 'remark'
-    const content = e.content
-      .replace(/\*\*(.*?)\*\*/g, '\\textbf{$1}')
-      .replace(/\*(.*?)\*/g, '\\textit{$1}')
-      .replace(/\n\n/g, '\n\n')
-
-    return [
-      `\\begin{${env}}[${e.title}]`,
-      `\\label{entry:${e.id}}`,
-      content,
-      e.refs.length > 0
-        ? `\n% References: ${e.refs.map((r: number) => `\\ref{entry:${r}}`).join(', ')}`
-        : '',
-      `\\end{${env}}`,
-    ].filter(Boolean).join('\n')
-  }).join('\n\n')
-
-  return `% MathBase Export
-% Generated: ${new Date().toISOString()}
-
-\\documentclass{amsart}
-\\usepackage{amsmath, amsthm, amssymb}
-
-% Theorem environments
-\\newtheorem{theorem}{Theorem}
-\\newtheorem{lemma}[theorem]{Lemma}
-\\newtheorem{corollary}[theorem]{Corollary}
-\\newtheorem{algorithm}[theorem]{Algorithm}
-\\newtheorem{axiom}[theorem]{Axiom}
-\\newtheorem{assumption}[theorem]{Assumption}
-\\theoremstyle{definition}
-\\newtheorem{definition}[theorem]{Definition}
-\\newtheorem{example}[theorem]{Example}
-\\theoremstyle{remark}
-\\newtheorem{remark}[theorem]{Remark}
-
-\\begin{document}
-
-${blocks}
-
-\\end{document}
-`
 }
 
 function processMarkdown(text: string): string {

@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
     if (mode === 'replace') {
       // Prisma'nın SQLite üzerinde deleteMany ile cascade yaparken sorun yaşamaması için sondan başa silme
       await prisma.relation.deleteMany()
-      await prisma.entryVersion.deleteMany()
       await prisma.entry.deleteMany()
       await prisma.source.deleteMany()
       await prisma.tag.deleteMany()
@@ -120,7 +119,6 @@ export async function POST(req: NextRequest) {
               symbolKeywords: Array.isArray(e.symbolKeywords) ? JSON.stringify(e.symbolKeywords) : '[]',
               sourceId: newSourceId,
               pageRange: e.pageRange || '',
-              versionNote: e.versionNote || 'JSON Import Update',
               isDeleted: Boolean(e.isDeleted),
               updatedAt: new Date(), // Her zaman güncellendiğini belirt
             }
@@ -139,7 +137,6 @@ export async function POST(req: NextRequest) {
               symbolKeywords: Array.isArray(e.symbolKeywords) ? JSON.stringify(e.symbolKeywords) : '[]',
               sourceId: newSourceId,
               pageRange: e.pageRange || '',
-              versionNote: e.versionNote || 'JSON Import',
               isDeleted: Boolean(e.isDeleted),
               createdAt: e.createdAt ? new Date(e.createdAt) : undefined,
               updatedAt: new Date(), // Her zaman güncellendiğini belirt

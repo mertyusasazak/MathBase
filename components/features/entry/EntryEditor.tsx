@@ -20,7 +20,7 @@ interface Props {
   allEntries?: EntryOption[]
   sources?: SourceOption[]
   initialRelations?: Relation[]
-  onSave: (entry: Partial<Entry>, versionNote?: string) => Promise<void>
+  onSave: (entry: Partial<Entry>) => Promise<void>
   onCancel: () => void
   onDelete?: () => void
 }
@@ -523,14 +523,6 @@ export default function EntryEditor(props: Props) {
           ) : <div />}
 
           <div style={{ display: 'flex', gap: 10, flex: 1, justifyContent: 'flex-end' }}>
-            {initial?.id && (
-              <Input
-                value={state.versionNote}
-                onChange={e => actions.setVersionNote(e.target.value)}
-                placeholder="Commit message (optional)…"
-                style={{ width: 220 }}
-              />
-            )}
             <Button variant="outline" onClick={actions.onCancel} icon={<X size={16} />}>
               Cancel
             </Button>

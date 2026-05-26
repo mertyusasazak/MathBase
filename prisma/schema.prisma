@@ -42,15 +42,12 @@ model Entry {
   symbolKeywords String   @default("[]")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  versionNote    String?
   personalNotes  String   @default("")
   isDeleted      Boolean  @default(false)
 
   // Explicit relations back to Relation model
   outgoing    Relation[] @relation("OutgoingRelations")
   incoming    Relation[] @relation("IncomingRelations")
-
-  versions    EntryVersion[]
 }
 
 model Relation {
@@ -66,19 +63,6 @@ model Relation {
   toEntry       Entry        @relation("IncomingRelations", fields: [toEntryId], references: [id])
 
   @@unique([fromEntryId, toEntryId, relationType])
-}
-
-model EntryVersion {
-  id        Int      @id @default(autoincrement())
-  entryId   Int
-  entry     Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  content   String
-  title     String
-  type      String
-  tags      String
-  refs      String
-  savedAt   DateTime @default(now())
-  note      String   @default("") // "Fixed proof step 2" gibi açıklama
 }
 
 model Tag {

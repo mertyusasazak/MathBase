@@ -9,7 +9,7 @@ interface Props {
   allEntries?: EntryOption[]
   sources?: SourceOption[]
   initialRelations?: Relation[]
-  onSave: (entry: Partial<Entry>, versionNote?: string) => Promise<void>
+  onSave: (entry: Partial<Entry>) => Promise<void>
   onCancel: () => void
   onDelete?: () => void
 }
@@ -53,7 +53,6 @@ export function useEntryEditor({
   // Layout state
   const [leftWidth, setLeftWidth] = useState(50)
   const [isResizing, setIsResizing] = useState(false)
-  const [versionNote, setVersionNote] = useState('')
   
   const editorRef = useRef<any>(null)
   const editorContainerRef = useRef<HTMLDivElement>(null)
@@ -127,8 +126,7 @@ export function useEntryEditor({
   const handleSave = async () => {
     setSaving(true)
     try {
-      await onSave(
-        {
+      await onSave({
           id: initial?.id,
           type,
           title,
@@ -138,9 +136,7 @@ export function useEntryEditor({
           relationData: refRelations, // Pass relationship types to backend
           sourceId: sourceId || null,
           pageRange,
-        },
-        versionNote || undefined
-      )
+        })
     } finally {
       setSaving(false)
     }
@@ -151,14 +147,14 @@ export function useEntryEditor({
       type, title, content, tags, sourceId, pageRange,
       refs, refRelations, saving,
       refSearch, activeRelType, isRefSearchOpen, dropdownPosition, dropdownRect,
-      leftWidth, isResizing, versionNote, openSections
+      leftWidth, isResizing, openSections
     },
     refs: {
       editorRef, editorContainerRef, searchContainerRef, containerRef
     },
     actions: {
       setType, setTitle, setContent, setTags, setSourceId, setPageRange,
-      setRefSearch, setActiveRelType, setIsRefSearchOpen, setVersionNote,
+      setRefSearch, setActiveRelType, setIsRefSearchOpen, setOpenSections,
       toggleSection, toggleRef,
       startResizing, handleSave, onCancel, onDelete, setRefRelations
     }
